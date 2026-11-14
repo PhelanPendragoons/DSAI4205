@@ -27,7 +27,7 @@ import torch
 from transformers import Qwen3Config, Qwen3ForCausalLM
 
 torch.set_num_threads(2)
-path = Path(__file__).resolve().parents[1] / "notebooks" / "Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb"
+path = Path(__file__).resolve().parents[1] / "models/label-only" / "Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb"
 nb = nbformat.read(path, as_version=4)
 nbformat.validate(nb)
 sources = {cell.id: cell.source for cell in nb.cells if cell.cell_type == "code"}

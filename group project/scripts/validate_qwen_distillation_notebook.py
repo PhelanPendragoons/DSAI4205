@@ -24,7 +24,7 @@ import torch
 from transformers import Qwen3Config, Qwen3ForCausalLM
 torch.set_num_threads(2)
 root = Path(__file__).resolve().parents[1]
-nb = nbformat.read(root / "notebooks/Qwen3_0_6B_LoRA_Rationale_Distillation_Colab.ipynb", as_version=4)
+nb = nbformat.read(root / "models/rationale-distillation/Qwen3_0_6B_LoRA_Rationale_Distillation_Colab.ipynb", as_version=4)
 nbformat.validate(nb)
 sources = {c.id: c.source for c in nb.cells if c.cell_type == "code"}
 for name, text in sources.items():
@@ -48,7 +48,7 @@ run("embedded-data")
 run("data")
 full_train, full_val = ns["train_df"].copy(), ns["val_df"].copy()
 manifest = ns["split_manifest"].copy()
-baseline = nbformat.read(root / "notebooks/Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb", as_version=4)
+baseline = nbformat.read(root / "models/label-only/Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb", as_version=4)
 baseline_data = next(c.source for c in baseline.cells if c.id == "data")
 exec(compile(baseline_data, "baseline-data", "exec"), ns)
 assert manifest.equals(ns["split_manifest"]), "Distillation split must exactly equal original notebook split"

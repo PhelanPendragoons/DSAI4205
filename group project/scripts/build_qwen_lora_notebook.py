@@ -15,7 +15,7 @@ from pathlib import Path
 from textwrap import dedent
 
 BASE = Path(__file__).resolve().parents[1]
-OUT = BASE / "notebooks" / "Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb"
+OUT = BASE / "models/label-only" / "Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb"
 cells = []
 
 
@@ -604,3 +604,8 @@ notebook = {"cells": cells, "metadata": {
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(json.dumps(notebook, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 print(f"Wrote {OUT} ({len(cells)} cells, {OUT.stat().st_size:,} bytes)")
+
+# Keep published Colab entry points executable. The model folder is canonical.
+legacy = BASE / "notebooks" / OUT.name
+legacy.parent.mkdir(parents=True, exist_ok=True)
+legacy.write_bytes(OUT.read_bytes())

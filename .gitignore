@@ -13,6 +13,8 @@ __MACOSX/
 venv/
 .tmp*/
 teacher_cache/
+counterfactual_cache/
+qwen_counterfactual_runs/
 checkpoints/
 qwen_lora_runs/
 qwen_distillation_runs/
