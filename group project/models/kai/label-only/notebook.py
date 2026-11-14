@@ -14,8 +14,8 @@ import json
 from pathlib import Path
 from textwrap import dedent
 
-BASE = Path(__file__).resolve().parents[1]
-OUT = BASE / "models/label-only" / "Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb"
+BASE = Path(__file__).resolve().parents[3]
+NOTEBOOK_NAME = "Kai_Sentiment_Experiments.ipynb"
 cells = []
 
 
@@ -598,14 +598,6 @@ md('''
 notebook = {"cells": cells, "metadata": {
     "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
     "language_info": {"name": "python", "version": "3.12"},
-    "colab": {"name": OUT.name, "provenance": [], "gpuType": "T4"},
+    "colab": {"name": NOTEBOOK_NAME, "provenance": [], "gpuType": "T4"},
     "accelerator": "GPU",
 }, "nbformat": 4, "nbformat_minor": 5}
-OUT.parent.mkdir(parents=True, exist_ok=True)
-OUT.write_text(json.dumps(notebook, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-print(f"Wrote {OUT} ({len(cells)} cells, {OUT.stat().st_size:,} bytes)")
-
-# Keep published Colab entry points executable. The model folder is canonical.
-legacy = BASE / "notebooks" / OUT.name
-legacy.parent.mkdir(parents=True, exist_ok=True)
-legacy.write_bytes(OUT.read_bytes())

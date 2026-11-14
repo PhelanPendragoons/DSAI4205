@@ -8,11 +8,10 @@
 
 用完整训练池拟合的 TF-IDF + 逻辑回归在测试集上取得 macro-F1 0.4662、accuracy 0.5063。神经模型的实验结果由各自的 Colab notebook 导出。[基线报告](group%20project/reports/baseline_metrics.json)
 
-## 实验目录
+## 成员实验
 
-| 模型 | 研究问题 |
-|---|---|
-| [TF-IDF + 逻辑回归](group%20project/models/tfidf-lr/README.md) | 词频特征能区分哪些类别？ |
-| [Qwen3 + LoRA 原始标签微调](group%20project/models/label-only/README.md) | 小语言模型仅使用人工标签时表现如何？ |
-| [短解释蒸馏](group%20project/models/rationale-distillation/README.md) | 筛选教师解释能否提高分类表现？ |
-| [反事实增强](group%20project/models/counterfactual/README.md) | 在相同解释监督下，少量情感翻转样本能否进一步提高 macro-F1？ |
+| 成员 | 模型 | 运行入口 |
+|---|---|---|
+| Kai | [线性基线、原始标签微调、短解释蒸馏和反事实增强](group%20project/models/kai/README.md) | [在 Colab 打开](https://colab.research.google.com/github/once123456/DSAI4205/blob/main/group%20project/notebooks/kai/Kai_Sentiment_Experiments.ipynb) |
+
+模型和 notebook 按成员归档。其他组员可分别在 `group project/models/<成员名>/` 和 `group project/notebooks/<成员名>/` 添加各自的工作，再将入口补到上表。

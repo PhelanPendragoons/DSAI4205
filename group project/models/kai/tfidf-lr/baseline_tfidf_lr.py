@@ -27,7 +27,7 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-BASE = Path(__file__).resolve().parents[1]
+BASE = Path(__file__).resolve().parents[3]
 DATA_DIR = BASE / "data" / "processed"
 FIG_DIR = BASE / "figures"
 REPORT_DIR = BASE / "reports"

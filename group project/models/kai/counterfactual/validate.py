@@ -1,5 +1,6 @@
 """Offline integration check. Pass --tokenizer a local Qwen3 tokenizer snapshot."""
 import argparse
+import runpy
 import io
 import json
 import os
@@ -13,25 +14,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--tokenizer", type=Path, required=True)
 options = parser.parse_args()
 os.environ.update(HF_HUB_OFFLINE="1", MPLBACKEND="Agg", TOKENIZERS_PARALLELISM="false")
-import nbformat
 import torch
 from transformers import AutoTokenizer, Qwen3Config, Qwen3ForCausalLM
 
 torch.set_num_threads(2)
-base = Path(__file__).resolve().parents[1]
+kai = Path(__file__).resolve().parents[1]
+parts = runpy.run_path(str(kai / "build_notebook.py"))["recipes"]()
 work = Path(tempfile.mkdtemp(prefix="dsai-counterfactual-check-"))
-
-def load_cells(folder):
-    notebook = nbformat.read(next((base / "models" / folder).glob("*.ipynb")), 4)
-    nbformat.validate(notebook)
-    result = {cell.id: cell.source for cell in notebook.cells if cell.cell_type == "code"}
-    for key, code in result.items():
-        if key != "install":
-            compile(code, key, "exec")
-    return result
-
-previous = load_cells("rationale-distillation")
-cells = load_cells("counterfactual")
+previous = {c["id"]: c["source"] for c in parts["rationale-distillation"] if c["cell_type"] == "code"}
+cells = {c["id"]: c["source"] for c in parts["counterfactual"] if c["cell_type"] == "code"}
 ns = {}
 
 def run(key, code=None):

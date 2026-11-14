@@ -2,12 +2,13 @@
 
 This is an integration check, NOT a benchmark of pretrained Qwen3-0.6B.
 Install the notebook's dependencies plus nbformat and ipython first.
-Usage: python validate_qwen_lora_notebook.py --work-dir PATH
+Usage: python validate.py --work-dir PATH
 Only the public tokenizer is downloaded (no 0.6B pretrained weights).
 """
 from __future__ import annotations
 
 import argparse
+import runpy
 import ast
 import json
 import os
@@ -22,15 +23,13 @@ os.environ["HF_HOME"] = str(work / "hf-cache")
 os.environ["MPLBACKEND"] = "Agg"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-import nbformat
 import torch
 from transformers import Qwen3Config, Qwen3ForCausalLM
 
 torch.set_num_threads(2)
-path = Path(__file__).resolve().parents[1] / "models/label-only" / "Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb"
-nb = nbformat.read(path, as_version=4)
-nbformat.validate(nb)
-sources = {cell.id: cell.source for cell in nb.cells if cell.cell_type == "code"}
+kai = Path(__file__).resolve().parents[1]
+parts = runpy.run_path(str(kai / "build_notebook.py"))["recipes"]()
+sources = {c["id"]: c["source"] for c in parts["label-only"] if c["cell_type"] == "code"}
 for name, source in sources.items():
     if name != "install":
         ast.parse(source, filename=name)

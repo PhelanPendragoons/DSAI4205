@@ -1,10 +1,7 @@
 """Compose a standalone counterfactual experiment using the rationale notebook's cells."""
-import json
-from pathlib import Path
 from textwrap import dedent
 
-PROJECT = Path(__file__).resolve().parents[1]
-prior = json.loads((PROJECT / "models/rationale-distillation/Qwen3_0_6B_LoRA_Rationale_Distillation_Colab.ipynb").read_text(encoding="utf-8"))
+# prior is the rationale-distillation recipe supplied by build_notebook.py.
 source = {cell["id"]: cell["source"] for cell in prior["cells"]}
 cells = []
 
@@ -389,10 +386,3 @@ except ImportError:
 '''
 add("markdown", "export-note", "## 导出模型、预测、两类教师缓存与反事实审计表")
 add("code", "export", export)
-out = PROJECT / "models/counterfactual/Qwen3_0_6B_LoRA_Counterfactual_Colab.ipynb"
-out.parent.mkdir(parents=True, exist_ok=True)
-metadata = prior["metadata"]
-metadata["colab"]["name"] = out.name
-out.write_text(json.dumps(dict(cells=cells, metadata=metadata, nbformat=4, nbformat_minor=5),
-                          ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-print(out)

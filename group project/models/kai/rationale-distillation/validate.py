@@ -2,9 +2,10 @@
 
 Never calls a paid teacher API. Fixture scores are not benchmark results.
 Run in an environment containing notebook dependencies, nbformat and IPython:
-python validate_qwen_distillation_notebook.py --work-dir /path/to/temporary/output
+python validate.py --work-dir /path/to/temporary/output
 """
 import argparse
+import runpy
 import ast
 import copy
 import json
@@ -18,15 +19,13 @@ work = parser.parse_args().work_dir.resolve()
 work.mkdir(parents=True, exist_ok=True)
 faulthandler.enable()
 os.environ.update(HF_HOME=str(work / "hf-cache"), MPLBACKEND="Agg", TOKENIZERS_PARALLELISM="false")
-import nbformat
 import numpy as np
 import torch
 from transformers import Qwen3Config, Qwen3ForCausalLM
 torch.set_num_threads(2)
-root = Path(__file__).resolve().parents[1]
-nb = nbformat.read(root / "models/rationale-distillation/Qwen3_0_6B_LoRA_Rationale_Distillation_Colab.ipynb", as_version=4)
-nbformat.validate(nb)
-sources = {c.id: c.source for c in nb.cells if c.cell_type == "code"}
+kai = Path(__file__).resolve().parents[1]
+parts = runpy.run_path(str(kai / "build_notebook.py"))["recipes"]()
+sources = {c["id"]: c["source"] for c in parts["rationale-distillation"] if c["cell_type"] == "code"}
 for name, text in sources.items():
     if name != "install": ast.parse(text)
 ns = {"__name__": "__validation__"}
@@ -48,8 +47,7 @@ run("embedded-data")
 run("data")
 full_train, full_val = ns["train_df"].copy(), ns["val_df"].copy()
 manifest = ns["split_manifest"].copy()
-baseline = nbformat.read(root / "models/label-only/Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb", as_version=4)
-baseline_data = next(c.source for c in baseline.cells if c.id == "data")
+baseline_data = next(c["source"] for c in parts["label-only"] if c["id"] == "data")
 exec(compile(baseline_data, "baseline-data", "exec"), ns)
 assert manifest.equals(ns["split_manifest"]), "Distillation split must exactly equal original notebook split"
 ns["SPLIT_MANIFEST_PATH"] = str(ns["RUN_DIR"] / "split_manifest.csv")

@@ -2,7 +2,7 @@
 
 教师在同一条训练推文上使用两个提示独立判断，给出类别、原文引文和短解释。筛选规则检查两次判断与人工标签的一致性、原文引文和目标实体信息。全部训练行保留原始分类监督，通过筛选的解释用于辅助生成任务。
 
-[在 Colab 运行](https://colab.research.google.com/github/once123456/DSAI4205/blob/main/group%20project/models/rationale-distillation/Qwen3_0_6B_LoRA_Rationale_Distillation_Colab.ipynb) · [查看 notebook](Qwen3_0_6B_LoRA_Rationale_Distillation_Colab.ipynb)
+在首个单元将 `RUN_MODE` 设为 `rationale-distillation`，再点击「全部运行」。[在 Colab 打开 Kai 的统一 notebook](https://colab.research.google.com/github/once123456/DSAI4205/blob/main/group%20project/notebooks/kai/Kai_Sentiment_Experiments.ipynb) · [查看 notebook](../../../notebooks/kai/Kai_Sentiment_Experiments.ipynb)
 
 启用 Colab GPU，在 Secrets 中设置 `TEACHER_API_KEY`。默认使用 DeepSeek 兼容接口。默认划分有 473 条训练行，空缓存完整生成需要 946 个不同请求，重试另计。Drive 缓存支持续跑。
 

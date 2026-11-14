@@ -2,7 +2,7 @@
 
 在四分类情感任务中，本实验检验一个局部改动是否有帮助。对于语义明确的正面或负面训练推文，教师替换一个短语，翻转情感，同时保留原句的话题、评价对象和写法。例如，手写示例 “The update fixed my problem” 可以改为 “The update caused my problem”。每个候选都要经过程序检查和教师核验。
 
-[在 Colab 运行](https://colab.research.google.com/github/once123456/DSAI4205/blob/main/group%20project/models/counterfactual/Qwen3_0_6B_LoRA_Counterfactual_Colab.ipynb) · [查看 notebook](Qwen3_0_6B_LoRA_Counterfactual_Colab.ipynb)
+在首个单元将 `RUN_MODE` 设为 `counterfactual`，再点击「全部运行」。[在 Colab 打开 Kai 的统一 notebook](https://colab.research.google.com/github/once123456/DSAI4205/blob/main/group%20project/notebooks/kai/Kai_Sentiment_Experiments.ipynb) · [查看 notebook](../../../notebooks/kai/Kai_Sentiment_Experiments.ipynb)
 
 ## 开始实验
 

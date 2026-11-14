@@ -1,11 +1,7 @@
 """Build a standalone Colab rationale-distillation experiment from baseline cells."""
-import copy
-import json
-from pathlib import Path
 from textwrap import dedent, indent
 
-BASE = Path(__file__).resolve().parents[1]
-original = json.loads((BASE / "models/label-only/Qwen3_0_6B_LoRA_Sentiment_Colab.ipynb").read_text(encoding="utf-8"))
+# original is the label-only recipe supplied by build_notebook.py.
 src = {c["id"]: c["source"] for c in original["cells"]}
 cells = []
 
@@ -604,7 +600,7 @@ md("references", '''
 - 格式检查组仅排除不可用或过长输出；筛选组再加入语义相关的启发式检查。
   相同教师的两次判断可能一起出错，原文引文也不能证明解释忠实。
 - 对筛选接受/拒绝样本按类别抽查，特别关注缺少目标实体时的 Irrelevant / Neutral。
-- 反事实增强版本位于项目的 models/counterfactual 目录，沿用此处的训练划分和教师缓存。
+- 反事实增强版本位于项目的 models/kai/counterfactual 目录，沿用此处的训练划分和教师缓存。
 - 记录教师版本、缓存、覆盖率和 token/时间成本；只有实际运行后才能判断蒸馏是否有效。
 
 参考：[Distilling Step-by-Step](https://aclanthology.org/2023.findings-acl.507/)、
@@ -612,15 +608,3 @@ md("references", '''
 [DeepSeek Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/)、
 [Transformers Trainer](https://huggingface.co/docs/transformers/v4.57.1/en/main_classes/trainer)。
 ''')
-
-out = BASE / "models/rationale-distillation/Qwen3_0_6B_LoRA_Rationale_Distillation_Colab.ipynb"
-metadata = copy.deepcopy(original["metadata"])
-metadata["colab"]["name"] = out.name
-out.parent.mkdir(parents=True, exist_ok=True)
-out.write_text(json.dumps({"cells": cells, "metadata": metadata, "nbformat": 4, "nbformat_minor": 5}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-print(f"Wrote {out} ({len(cells)} cells)")
-
-# Keep published Colab entry points executable. The model folder is canonical.
-legacy = BASE / "notebooks" / out.name
-legacy.parent.mkdir(parents=True, exist_ok=True)
-legacy.write_bytes(out.read_bytes())
