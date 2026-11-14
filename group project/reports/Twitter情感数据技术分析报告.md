@@ -277,7 +277,7 @@ EDA 表明：训练集与测试集为同一分布；篇幅不能稳定区分情�
 
 ## 6. 基线模型
 
-脚本为 `models/kai/tfidf-lr/baseline_tfidf_lr.py`，训练集 591 条、测试集 397 条，输入为 `text_clean`。
+脚本为 `models/tfidf-lr/baseline_tfidf_lr.py`，训练集 591 条、测试集 397 条，输入为 `text_clean`。
 
 - **特征**：TF-IDF（1–2 元词，`min_df=2`，`sublinear_tf`），词表大小 1951；
 - **模型**：逻辑回归（`C=1`，未加类别权重）；
@@ -363,7 +363,7 @@ EDA 表明：训练集与测试集为同一分布；篇幅不能稳定区分情�
 | `reports/eda_stats.json` / `extended_stats.json` | 计数、高频词、检验统计量 |
 | `scripts/clean_and_analyze.py` | 清理主流程 + 前半 EDA |
 | `scripts/extend_analysis.py` | 后半 EDA（相关、画像、区分词） |
-| `models/kai/tfidf-lr/baseline_tfidf_lr.py` | TF-IDF + 逻辑回归基线 |
+| `models/tfidf-lr/baseline_tfidf_lr.py` | TF-IDF + 逻辑回归基线 |
 
 ## 附录 B：数据口径与订正说明
 

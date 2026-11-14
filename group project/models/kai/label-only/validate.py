@@ -110,7 +110,7 @@ assert ns["preprocess_logits_for_metrics"](fake_logits, fake_labels).argmax().it
 
 run("test")  # Confirm SMOKE_TEST skips the held-out test evaluation.
 assert not (ns["RUN_DIR"] / "test_metrics.json").exists()
-# Exercise report / plot / baseline code on a small fixture, not publishable test scores.
+# Exercise the classification report and confusion matrix on a small fixture.
 test_source = replace(sources["test"], 'test_df = read_snapshot("test")', 'test_df = read_snapshot("test").groupby("Sentiment", group_keys=False).head(2).reset_index(drop=True)')
 ns["SMOKE_TEST"] = False
 run("test", test_source)
@@ -127,7 +127,7 @@ summary = {
                "no normalized train/test overlap", "long-input truncation", "answer-only and padding masks",
                "actual Trainer forward/backward and checkpoint selection", "LoRA parameters updated; base frozen",
                "causal next-token metric alignment", "label-free inference equivalence", "smoke mode skips test",
-               "test reporting and TF-IDF comparison on fixture", "adapter save/reload equivalence", "ZIP export"],
+               "test reporting on fixture", "adapter save/reload equivalence", "ZIP export"],
     "versions": ns["VERSIONS"], "split_counts": {"train": len(full_train), "validation": len(full_val), "test": len(test_all)},
 }
 (work / "validation_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")

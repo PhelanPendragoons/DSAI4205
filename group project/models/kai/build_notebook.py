@@ -7,8 +7,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / "notebooks/kai/Kai_Sentiment_Experiments.ipynb"
-CPU, LABEL, RAT, CF = "tfidf-lr", "label-only", "rationale-distillation", "counterfactual"
-NEURAL = [LABEL, RAT, CF]
+LABEL, RAT, CF = "label-only", "rationale-distillation", "counterfactual"
 
 
 def recipes():
@@ -54,8 +53,7 @@ def build():
 
 | RUN_MODE | 本次执行 | 所需资源 |
 |---|---|---|
-| tfidf-lr | 同训练子集及全训练池的 TF-IDF 基线 | CPU |
-| label-only | 原始标签 LoRA 微调、早停、与线性基线比较 | GPU |
+| label-only | 原始标签 LoRA 微调、早停与测试评估 | GPU |
 | rationale-distillation | 原始标签、未筛选解释、筛选解释对照 | GPU 和教师缓存或 API 密钥 |
 | counterfactual | 筛选解释组与加入反事实改写组的配对比较 | GPU 和教师缓存或 API 密钥 |
 
@@ -63,15 +61,12 @@ def build():
 反事实模式默认复用解释缓存，最多为 80 个训练样本生成并核验改写，最多 160 个不同的新请求。
 如需教师 API，请在 Colab Secrets 设置 TEACHER_API_KEY。""")
     code("mode", '''# @title 选择本次实验
-RUN_MODE = "label-only" # @param ["tfidf-lr", "label-only", "rationale-distillation", "counterfactual"]
-if RUN_MODE not in {"tfidf-lr", "label-only", "rationale-distillation", "counterfactual"}:
+RUN_MODE = "label-only" # @param ["label-only", "rationale-distillation", "counterfactual"]
+if RUN_MODE not in {"label-only", "rationale-distillation", "counterfactual"}:
     raise ValueError("请选择表中的运行模式。")
 print("本次运行", RUN_MODE)''')
     packages = source[CF]["install"].strip().removeprefix("%pip ")
-    code("install", f'''if RUN_MODE == "tfidf-lr":
-    get_ipython().run_line_magic("pip", 'install -q "pandas==2.2.3" "scikit-learn==1.6.1" "ftfy==6.3.1"')
-else:
-    get_ipython().run_line_magic("pip", {packages!r})''')
+    code("install", f'get_ipython().run_line_magic("pip", {packages!r})')
     add("markdown", "settings", """## 实验配置与数据
 
 神经模型请选择 GPU。解释蒸馏默认生成缺少的教师记录，反事实模式默认只读上一版解释缓存。
@@ -79,17 +74,11 @@ else:
 自定义缓存位置请填写 TEACHER_CACHE_ROOT，反事实缓存使用 CF_CACHE_ROOT。
 SAVE_TO_DRIVE 控制是否将结果持久保存到 Google Drive。""")
     cfg = source[CF]["config"]
-    cfg = cfg.replace("import torch\n", 'if RUN_MODE != "tfidf-lr":\n    import torch\n')
-    cfg = cfg.replace("import matplotlib.pyplot as plt\n", 'if RUN_MODE != "tfidf-lr":\n    import matplotlib.pyplot as plt\n')
-    start, end = cfg.index("from transformers import"), cfg.index("\nMODEL_ID =")
-    cfg = cfg[:start] + 'if RUN_MODE != "tfidf-lr":\n' + indent_code(cfg[start:end]) + "\n" + cfg[end:]
     cfg = cfg.replace("SAVE_TO_DRIVE = True", 'SAVE_TO_DRIVE = RUN_MODE in {"rationale-distillation", "counterfactual"}')
     cfg = cfg.replace('ALLOW_TEACHER_REQUESTS = False', 'ALLOW_TEACHER_REQUESTS = RUN_MODE == "rationale-distillation"')
     cfg = cfg.replace('SEEDS = [42]', 'SEEDS = [42]\nRUN_UNFILTERED = True')
-    start, end = cfg.index("if not torch.cuda.is_available():"), cfg.index("\nif SAVE_TO_DRIVE:")
-    cfg = cfg[:start] + 'if RUN_MODE != "tfidf-lr":\n' + indent_code(cfg[start:end]) + "\n" + cfg[end:]
     start, end = cfg.index("if SAVE_TO_DRIVE:"), cfg.index("RUN_ID =")
-    cfg = cfg[:start] + '''run_folder = {"tfidf-lr": "tfidf", "label-only": "qwen_lora",
+    cfg = cfg[:start] + '''run_folder = {"label-only": "qwen_lora",
               "rationale-distillation": "qwen_distillation", "counterfactual": "qwen_counterfactual"}[RUN_MODE]
 if SAVE_TO_DRIVE:
     from google.colab import drive
@@ -98,12 +87,6 @@ if SAVE_TO_DRIVE:
 else:
     OUTPUT_ROOT = Path("/content") / (run_folder + "_runs")
 ''' + cfg[end:]
-    start, end = cfg.index("VERSIONS ="), cfg.index('print("输出目录')
-    cfg = cfg[:start] + '''packages = ["numpy", "pandas", "scikit-learn", "ftfy"]
-if RUN_MODE != "tfidf-lr":
-    packages += ["torch", "transformers", "peft", "accelerate", "matplotlib"]
-VERSIONS = {p: version(p) for p in packages}
-''' + cfg[end:]
     start = cfg.index("import gc\n")
     cfg = cfg[:start] + 'if RUN_MODE in ("rationale-distillation", "counterfactual"):\n' + indent_code(cfg[start:])
     code("config", cfg)
@@ -111,13 +94,11 @@ VERSIONS = {p: version(p) for p in packages}
     step(CF, "import-export")
     code("embedded-data", source[LABEL]["embedded-data"])
     code("data", source[CF]["data"])
-    add("markdown", "linear-note", "## TF-IDF + 逻辑回归\n\n此模式分别在 473 条训练子集和 591 条完整训练池上拟合。表格和逐条预测保存在打印的结果目录中。")
-    code("linear", (HERE / CPU / "experiment.py").read_text(encoding="utf-8"), [CPU])
     add("markdown", "teacher-note", source[RAT]["teacher-note"])
     for key in ["teacher-functions", "teacher-run"]:
         step(RAT, key, [RAT, CF])
     add("markdown", "token-note", source[LABEL]["tokenization-note"])
-    step(LABEL, "tokenization", NEURAL)
+    code("label-only-tokenization", source[LABEL]["tokenization"])
     add("markdown", "label-note", "## 原始标签微调\n\n本模式按验证 macro-F1 选取最佳 adapter，支持早停。实验完成后下载 ZIP，最后一格可试用自定义推文。")
     for key in ["model", "train", "inference", "test", "export", "demo"]:
         step(LABEL, key)

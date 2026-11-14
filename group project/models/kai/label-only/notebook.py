@@ -66,11 +66,11 @@ md('''
 
 Notebook 已内嵌本项目数据快照：**591 条训练池样本、397 条测试样本**。
 使用现有清理流程确定的行与标签，但模型输入取 `Phrase` 原文并轻度修复编码，
-保留大小写、标点、emoji 和账号；`text_clean` 仅用于重跑原始 TF-IDF baseline。
+保留大小写、标点、emoji 和账号。
 原始训练 CSV 的 596 条经过既有去重和跨集重复处理得到 591 条，此处不会重新改标签。
 
 训练池固定划出约 20% 验证集；按验证集 macro-F1 选 checkpoint，测试集最后评估。
-默认不在选择 epoch 后重训全部 591 条，因此也输出**相同训练子集**的 TF-IDF 对照。
+导出的划分清单和测试预测可用于小组共享基线的同划分比较。
 当前 notebook 尚不包含实际 GPU 训练结果；请以你运行产生的指标为准。
 ''', "intro")
 
@@ -442,10 +442,9 @@ display(pd.DataFrame({"text": probe.text, "true": probe.Sentiment.map(dict(enume
 ''', "inference")
 
 md('''
-## 8. 最终测试与公平对照
+## 8. 最终测试
 模型已按验证集选定；此处才读取测试标签，不能据此继续选参数。
 输出 accuracy、macro-F1、每类指标、混淆矩阵和逐条预测。
-同时在相同训练子集上重跑 TF-IDF + LR；另列训练全池的原始 baseline，明确数据量差异。
 已有标记的 1 条历史跨集重复在当前训练池中已删除：主指标仍用全部 397 条，
 另外输出去掉历史标记行的敏感性结果，便于对照旧报告。
 ''', "test-note")
@@ -458,7 +457,7 @@ def metric_summary(y_true, y_pred):
                 y_true, y_pred, labels=LABEL_IDS, target_names=LABEL_NAMES, output_dict=True, zero_division=0)}
 
 if SMOKE_TEST:
-    print("SMOKE_TEST：跳过测试集与正式 baseline 比较。")
+    print("SMOKE_TEST 跳过测试集评估。")
 else:
     test_df = read_snapshot("test")
     test_df["text"] = test_df["Phrase"].map(normalize_text)
@@ -479,24 +478,6 @@ else:
         predictions[f"prob_{name}"] = test_probs[:, i]
     predictions.to_csv(RUN_DIR / "test_predictions.csv", index=False)
     print(classification_report(test_df.Sentiment, test_pred, labels=LABEL_IDS, target_names=LABEL_NAMES, digits=4, zero_division=0))
-
-    from sklearn.pipeline import make_pipeline
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.linear_model import LogisticRegression
-    comparisons = [{"model": "Qwen3-0.6B + LoRA (validation-selected)", "train_n": len(train_df),
-                    "accuracy": test_metrics["accuracy"], "macro_f1": test_metrics["macro_f1"]}]
-    for title, frame in [("TF-IDF + LR (same training subset)", train_df), ("TF-IDF + LR (full 591-row pool)", pool)]:
-        baseline = make_pipeline(
-            TfidfVectorizer(ngram_range=(1, 2), min_df=2, sublinear_tf=True),
-            LogisticRegression(C=1.0, max_iter=2000, random_state=SEED),
-        )
-        baseline.fit(frame.text_clean, frame.Sentiment)
-        baseline_pred = baseline.predict(test_df.text_clean)
-        summary = metric_summary(test_df.Sentiment, baseline_pred)
-        comparisons.append({"model": title, "train_n": len(frame), "accuracy": summary["accuracy"], "macro_f1": summary["macro_f1"]})
-    comparison = pd.DataFrame(comparisons)
-    display(comparison)
-    comparison.to_csv(RUN_DIR / "comparison.csv", index=False)
 
     fig, ax = plt.subplots(figsize=(6, 5))
     ConfusionMatrixDisplay(confusion_matrix(test_df.Sentiment, test_pred, labels=LABEL_IDS), display_labels=LABEL_NAMES).plot(ax=ax, cmap="Blues", colorbar=False)
