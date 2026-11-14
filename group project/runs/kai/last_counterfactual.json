@@ -1,0 +1,7 @@
+{
+  "mode": "counterfactual",
+  "run_dir": "C:\\Users\\Library\\Desktop\\DSAI4205\\group project\\runs\\kai\\qwen_counterfactual_runs\\20261114T102655_279072Z_seed42",
+  "archive": "C:\\Users\\Library\\Desktop\\DSAI4205\\group project\\runs\\kai\\qwen_counterfactual_runs\\20261114T102655_279072Z_seed42\\qwen3_counterfactual.zip",
+  "teacher_model": "deepseek-v4-pro",
+  "teacher_base_url": "https://api.deepseek.com"
+}

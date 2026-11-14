@@ -59,7 +59,7 @@ def build():
 
 从零生成解释，每条训练推文需要两次教师判断，共 946 个请求，重试另计。
 反事实模式默认复用解释缓存，最多为 80 个训练样本生成并核验改写，最多 160 个不同的新请求。
-如需教师 API，请在 Colab Secrets 设置 TEACHER_API_KEY。""")
+如需教师 API，请在 Colab Secrets 设置 TEACHER_API_KEY；本地请使用 models/kai/.env。""")
     code("mode", '''# @title 选择本次实验
 RUN_MODE = "label-only" # @param ["label-only", "rationale-distillation", "counterfactual"]
 if RUN_MODE not in {"label-only", "rationale-distillation", "counterfactual"}:
@@ -72,20 +72,24 @@ print("本次运行", RUN_MODE)''')
 神经模型请选择 GPU。解释蒸馏默认生成缺少的教师记录，反事实模式默认只读上一版解释缓存。
 在反事实模式中，可将 DISTILLATION_EXPORT 指向上一版 ZIP 或已解压的结果文件夹。
 自定义缓存位置请填写 TEACHER_CACHE_ROOT，反事实缓存使用 CF_CACHE_ROOT。
-SAVE_TO_DRIVE 控制是否将结果持久保存到 Google Drive。""")
+Colab 上 SAVE_TO_DRIVE 可将结果写入 Google Drive；本地结果写入 group project/runs/kai/。""")
     cfg = source[CF]["config"]
-    cfg = cfg.replace("SAVE_TO_DRIVE = True", 'SAVE_TO_DRIVE = RUN_MODE in {"rationale-distillation", "counterfactual"}')
+    cfg = cfg.replace("SAVE_TO_DRIVE = True", "SAVE_TO_DRIVE = False")
     cfg = cfg.replace('ALLOW_TEACHER_REQUESTS = False', 'ALLOW_TEACHER_REQUESTS = RUN_MODE == "rationale-distillation"')
     cfg = cfg.replace('SEEDS = [42]', 'SEEDS = [42]\nRUN_UNFILTERED = True')
-    start, end = cfg.index("if SAVE_TO_DRIVE:"), cfg.index("RUN_ID =")
+    start = cfg.index("if SAVE_TO_DRIVE and IN_COLAB:")
+    end = cfg.index("RUN_ID =")
     cfg = cfg[:start] + '''run_folder = {"label-only": "qwen_lora",
               "rationale-distillation": "qwen_distillation", "counterfactual": "qwen_counterfactual"}[RUN_MODE]
+SAVE_TO_DRIVE = IN_COLAB and RUN_MODE in {"rationale-distillation", "counterfactual"}
 if SAVE_TO_DRIVE:
     from google.colab import drive
     drive.mount("/content/drive")
     OUTPUT_ROOT = Path("/content/drive/MyDrive") / ("dsai4205_" + run_folder)
-else:
+elif IN_COLAB:
     OUTPUT_ROOT = Path("/content") / (run_folder + "_runs")
+else:
+    OUTPUT_ROOT = local_runs_root() / (run_folder + "_runs")
 ''' + cfg[end:]
     start = cfg.index("import gc\n")
     cfg = cfg[:start] + 'if RUN_MODE in ("rationale-distillation", "counterfactual"):\n' + indent_code(cfg[start:])

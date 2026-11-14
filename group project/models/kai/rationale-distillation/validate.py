@@ -36,11 +36,14 @@ def run(name, source=None):
     exec(compile(source if source is not None else sources[name], name, "exec"), ns)
 
 
+os.environ["KAI_RUNS_ROOT"] = str(work / "kai-runs")
 config = sources["config"].replace("SAVE_TO_DRIVE = True", "SAVE_TO_DRIVE = False")
 start, end = config.index("if not torch.cuda.is_available():"), config.index("set_seed(SEED)")
-config = config[:start] + "USE_BF16 = False\nMODEL_DTYPE = torch.float32\n" + config[end:]
-config = config.replace('Path("/content/qwen_distillation_runs")', f"Path({str(work / 'runs')!r})")
+config = config[:start] + "USE_BF16 = False\nMODEL_DTYPE = torch.float32\nIN_COLAB = False\n" + config[end:]
 run("config", config)
+ns["OUTPUT_ROOT"] = work / "runs"
+ns["RUN_DIR"] = ns["OUTPUT_ROOT"] / ns["RUN_ID"]
+ns["RUN_DIR"].mkdir(parents=True, exist_ok=True)
 ns.update(SMOKE_TEST=True, GRAD_ACCUMULATION=1, TRAIN_BATCH_SIZE=1, EVAL_BATCH_SIZE=1, EPOCHS=1)
 ns["CACHE_ROOT"] = ns["RUN_DIR"] / "teacher_cache_test"
 run("embedded-data")

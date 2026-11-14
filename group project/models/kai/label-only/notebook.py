@@ -115,6 +115,65 @@ from transformers import (AutoTokenizer, AutoModelForCausalLM, Trainer,
 from peft import LoraConfig, TaskType, get_peft_model, PeftModel
 from huggingface_hub import model_info
 
+def local_runs_root():
+    if os.environ.get("KAI_RUNS_ROOT"):
+        return Path(os.environ["KAI_RUNS_ROOT"]).expanduser().resolve()
+    here = Path.cwd().resolve()
+    for base in [here, *here.parents]:
+        if (base / "models" / "kai").is_dir():
+            return (base / "runs" / "kai").resolve()
+        if (base / "data" / "processed").is_dir():
+            return (base / "runs" / "kai").resolve()
+    return (here / "runs" / "kai").resolve()
+
+def load_kai_env(path=None):
+    """Load TEACHER_API_KEY / DEEPSEEK_API_KEY from models/kai/.env (KEY=value or bare key line)."""
+    candidates = []
+    if path:
+        candidates.append(Path(path))
+    if os.environ.get("KAI_ENV_FILE"):
+        candidates.append(Path(os.environ["KAI_ENV_FILE"]))
+    here = Path.cwd().resolve()
+    for base in [here, *here.parents]:
+        candidates.append(base / "models" / "kai" / ".env")
+        if base.name == "kai":
+            candidates.append(base / ".env")
+    seen = set()
+    for env_path in candidates:
+        try:
+            env_path = env_path.expanduser().resolve()
+        except OSError:
+            continue
+        if env_path in seen or not env_path.is_file():
+            continue
+        seen.add(env_path)
+        text = env_path.read_text(encoding="utf-8").strip()
+        if not text:
+            continue
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
+        if len(lines) == 1 and "=" not in lines[0]:
+            os.environ.setdefault("TEACHER_API_KEY", lines[0].strip().strip('"').strip("'"))
+            return env_path
+        for ln in lines:
+            if "=" not in ln:
+                continue
+            key, _, value = ln.partition("=")
+            key, value = key.strip(), value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+        return env_path
+    return None
+
+def running_in_colab():
+    try:
+        import google.colab  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+load_kai_env()
+IN_COLAB = running_in_colab()
+
 MODEL_ID = "Qwen/Qwen3-0.6B"
 MODEL_REVISION = "main"  # 首次运行解析为不可变 commit SHA 并记录；复现实验可填记录的 SHA。
 SEED = 42
@@ -133,7 +192,7 @@ SAVE_TO_DRIVE = False
 RUN_RELOAD_CHECK = True
 
 if not torch.cuda.is_available():
-    raise RuntimeError("请先在 Colab 的运行时类型中启用 NVIDIA GPU，然后重新运行。")
+    raise RuntimeError("需要可用的 NVIDIA CUDA GPU（Colab 或本地）。")
 USE_BF16 = torch.cuda.is_bf16_supported()
 MODEL_DTYPE = torch.bfloat16 if USE_BF16 else torch.float16
 print("GPU:", torch.cuda.get_device_name(0))
@@ -141,12 +200,14 @@ print("显存 GiB:", round(torch.cuda.get_device_properties(0).total_memory / 2*
 print("精度:", MODEL_DTYPE)
 set_seed(SEED)
 
-if SAVE_TO_DRIVE:
+if SAVE_TO_DRIVE and IN_COLAB:
     from google.colab import drive
     drive.mount("/content/drive")
     OUTPUT_ROOT = Path("/content/drive/MyDrive/dsai4205_qwen_lora")
-else:
+elif IN_COLAB:
     OUTPUT_ROOT = Path("/content/qwen_lora_runs")
+else:
+    OUTPUT_ROOT = local_runs_root() / "qwen_lora_runs"
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ") + f"_seed{SEED}"
 RUN_DIR = OUTPUT_ROOT / RUN_ID
 RUN_DIR.mkdir(parents=True, exist_ok=False)

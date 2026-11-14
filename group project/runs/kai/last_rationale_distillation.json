@@ -1,0 +1,7 @@
+{
+  "mode": "rationale-distillation",
+  "run_dir": "C:\\Users\\Library\\Desktop\\DSAI4205\\group project\\runs\\kai\\qwen_distillation_runs\\20261114T090915_982382Z_seed42",
+  "archive": "C:\\Users\\Library\\Desktop\\DSAI4205\\group project\\runs\\kai\\qwen_distillation_runs\\20261114T090915_982382Z_seed42\\qwen3_rationale_distillation.zip",
+  "teacher_model": "deepseek-v4-pro",
+  "teacher_base_url": "https://api.deepseek.com"
+}

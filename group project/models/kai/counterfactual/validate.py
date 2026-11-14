@@ -29,11 +29,14 @@ def run(key, code=None):
     print(key, flush=True)
     exec(compile(cells[key] if code is None else code, key, "exec"), ns)
 
+os.environ["KAI_RUNS_ROOT"] = str(work / "kai-runs")
 cfg = cells["config"].replace("SAVE_TO_DRIVE = True", "SAVE_TO_DRIVE = False")
-cfg = cfg[:cfg.index("if not torch.cuda.is_available():")] + "USE_BF16=False\nMODEL_DTYPE=torch.float32\n" + cfg[cfg.index("set_seed(SEED)"): ]
-cfg = cfg.replace('Path("/content/qwen_counterfactual_runs")', f"Path({str(work / 'runs')!r})")
+cfg = cfg[:cfg.index("if not torch.cuda.is_available():")] + "USE_BF16=False\nMODEL_DTYPE=torch.float32\nIN_COLAB=False\n" + cfg[cfg.index("set_seed(SEED)"): ]
 cfg = cfg.replace('TEACHER_CACHE_ROOT = ""', f"TEACHER_CACHE_ROOT = {str(work / 'reused-cache')!r}")
 run("config", cfg)
+ns["OUTPUT_ROOT"] = work / "runs"
+ns["RUN_DIR"] = ns["OUTPUT_ROOT"] / ns["RUN_ID"]
+ns["RUN_DIR"].mkdir(parents=True, exist_ok=True)
 run("embedded-data")
 run("data", previous["data"])
 reference_split = ns["split_manifest"].copy()

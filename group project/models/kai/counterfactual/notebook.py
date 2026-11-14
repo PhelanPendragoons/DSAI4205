@@ -52,7 +52,7 @@ CF_CACHE_ROOT = ""
 ALLOW_CF_REQUESTS = True
 CF_REQUEST_BUDGET = 200  # 每次生成单元执行包含重试的请求上限''')
 config = replace_once(config, "ALLOW_TEACHER_REQUESTS = True", "ALLOW_TEACHER_REQUESTS = False")
-config = config.replace("dsai4205_qwen_distillation", "dsai4205_qwen_counterfactual").replace("/content/qwen_distillation_runs", "/content/qwen_counterfactual_runs")
+config = config.replace("dsai4205_qwen_distillation", "dsai4205_qwen_counterfactual").replace("qwen_distillation_runs", "qwen_counterfactual_runs")
 config = replace_once(config, 'CACHE_ROOT = Path(TEACHER_CACHE_ROOT) if TEACHER_CACHE_ROOT else OUTPUT_ROOT / "teacher_cache"', '''old_root = OUTPUT_ROOT.parent / ("dsai4205_qwen_distillation" if SAVE_TO_DRIVE else "qwen_distillation_runs")
 CACHE_ROOT = Path(TEACHER_CACHE_ROOT) if TEACHER_CACHE_ROOT else old_root / "teacher_cache"
 CF_CACHE = Path(CF_CACHE_ROOT) if CF_CACHE_ROOT else OUTPUT_ROOT / "counterfactual_cache"
