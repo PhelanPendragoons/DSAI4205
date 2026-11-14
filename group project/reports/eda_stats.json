@@ -1,0 +1,417 @@
+{
+  "raw_rows": {
+    "train": 596,
+    "test": 397
+  },
+  "cleaned_rows": {
+    "train": 591,
+    "test": 397
+  },
+  "removed_rows": 5,
+  "raw_class_counts": {
+    "train": {
+      "Negative": 178,
+      "Positive": 165,
+      "Irrelevant": 106,
+      "Neutral": 147
+    },
+    "test": {
+      "Negative": 120,
+      "Positive": 106,
+      "Irrelevant": 66,
+      "Neutral": 105
+    }
+  },
+  "clean_class_counts": {
+    "train": {
+      "Negative": 174,
+      "Positive": 165,
+      "Irrelevant": 106,
+      "Neutral": 146
+    },
+    "test": {
+      "Negative": 120,
+      "Positive": 106,
+      "Irrelevant": 66,
+      "Neutral": 105
+    }
+  },
+  "outlier_cutoff_words": 58.5,
+  "length_outliers": {
+    "train": 3,
+    "test": 4
+  },
+  "empty_after_clean": {
+    "train": 0,
+    "test": 0
+  },
+  "issue_counts_raw_train": {
+    "non_ascii": 99,
+    "unk": 26,
+    "url": 122,
+    "mention": 166,
+    "elongation": 15,
+    "redaction": 6
+  },
+  "issue_counts_raw_test": {
+    "non_ascii": 74,
+    "unk": 5,
+    "url": 88,
+    "mention": 115,
+    "elongation": 20,
+    "redaction": 13
+  },
+  "vocab_train_raw_alpha": 3367,
+  "vocab_train_clean": 2699,
+  "mean_words_raw_train": 21.24,
+  "mean_words_clean_train": 20.5,
+  "length_tests_train": {
+    "kruskal_h": 9.12,
+    "kruskal_p": 0.027735141944687715,
+    "median_by_class": {
+      "Negative": 19.0,
+      "Positive": 14.0,
+      "Irrelevant": 18.0,
+      "Neutral": 17.0
+    },
+    "mean_by_class": {
+      "Negative": 22.94,
+      "Positive": 19.1,
+      "Irrelevant": 22.31,
+      "Neutral": 20.84
+    }
+  },
+  "length_tests_test": {
+    "kruskal_h": 6.143,
+    "kruskal_p": 0.10484511156847054,
+    "median_by_class": {
+      "Negative": 16.5,
+      "Positive": 17.0,
+      "Irrelevant": 19.0,
+      "Neutral": 19.0
+    },
+    "mean_by_class": {
+      "Negative": 20.03,
+      "Positive": 19.56,
+      "Irrelevant": 22.71,
+      "Neutral": 22.79
+    }
+  },
+  "top_words": {
+    "Negative": [
+      [
+        "not",
+        60
+      ],
+      [
+        "game",
+        44
+      ],
+      [
+        "get",
+        35
+      ],
+      [
+        "fuck",
+        31
+      ],
+      [
+        "shit",
+        24
+      ],
+      [
+        "play",
+        23
+      ],
+      [
+        "go",
+        22
+      ],
+      [
+        "like",
+        20
+      ],
+      [
+        "no",
+        15
+      ],
+      [
+        "still",
+        14
+      ]
+    ],
+    "Positive": [
+      [
+        "game",
+        23
+      ],
+      [
+        "love",
+        22
+      ],
+      [
+        "play",
+        22
+      ],
+      [
+        "not",
+        21
+      ],
+      [
+        "like",
+        18
+      ],
+      [
+        "new",
+        15
+      ],
+      [
+        "go",
+        14
+      ],
+      [
+        "get",
+        13
+      ],
+      [
+        "would",
+        12
+      ],
+      [
+        "2",
+        12
+      ]
+    ],
+    "Irrelevant": [
+      [
+        "not",
+        21
+      ],
+      [
+        "get",
+        14
+      ],
+      [
+        "play",
+        14
+      ],
+      [
+        "game",
+        13
+      ],
+      [
+        "player",
+        13
+      ],
+      [
+        "love",
+        10
+      ],
+      [
+        "2",
+        10
+      ],
+      [
+        "go",
+        10
+      ],
+      [
+        "team",
+        8
+      ],
+      [
+        "fuck",
+        8
+      ]
+    ],
+    "Neutral": [
+      [
+        "not",
+        22
+      ],
+      [
+        "get",
+        21
+      ],
+      [
+        "johnson",
+        20
+      ],
+      [
+        "2",
+        15
+      ],
+      [
+        "good",
+        14
+      ],
+      [
+        "amazon",
+        14
+      ],
+      [
+        "game",
+        12
+      ],
+      [
+        "5",
+        11
+      ],
+      [
+        "play",
+        10
+      ],
+      [
+        "new",
+        10
+      ]
+    ]
+  },
+  "top_bigrams": {
+    "Negative": [
+      [
+        "johnson johnson",
+        5
+      ],
+      [
+        "league legend",
+        5
+      ],
+      [
+        "home depot",
+        4
+      ],
+      [
+        "call duty",
+        4
+      ],
+      [
+        "black ops",
+        4
+      ],
+      [
+        "ops cold",
+        4
+      ],
+      [
+        "cold war",
+        4
+      ],
+      [
+        "not work",
+        4
+      ]
+    ],
+    "Positive": [
+      [
+        "assassin creed",
+        10
+      ],
+      [
+        "black ops",
+        4
+      ],
+      [
+        "red dead",
+        4
+      ],
+      [
+        "game love",
+        3
+      ],
+      [
+        "xbox series",
+        3
+      ],
+      [
+        "much fun",
+        3
+      ],
+      [
+        "dead redemption",
+        3
+      ],
+      [
+        "state tell",
+        3
+      ]
+    ],
+    "Irrelevant": [
+      [
+        "league legend",
+        5
+      ],
+      [
+        "not play",
+        3
+      ],
+      [
+        "reason not",
+        2
+      ],
+      [
+        "not get",
+        2
+      ],
+      [
+        "week one",
+        2
+      ],
+      [
+        "one emustang",
+        2
+      ],
+      [
+        "emustang league",
+        2
+      ],
+      [
+        "legend result",
+        2
+      ]
+    ],
+    "Neutral": [
+      [
+        "johnson johnson",
+        8
+      ],
+      [
+        "red dead",
+        6
+      ],
+      [
+        "dead redemption",
+        4
+      ],
+      [
+        "call duty",
+        3
+      ],
+      [
+        "not wait",
+        3
+      ],
+      [
+        "enter grand",
+        3
+      ],
+      [
+        "grand summoners",
+        3
+      ],
+      [
+        "summoners watch",
+        3
+      ]
+    ]
+  },
+  "overlap_phrases": [
+    "It is not the first time that the EU Commission has taken such a step."
+  ],
+  "label_map": {
+    "0": "Negative",
+    "1": "Positive",
+    "2": "Irrelevant",
+    "3": "Neutral"
+  }
+}

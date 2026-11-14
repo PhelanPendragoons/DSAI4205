@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "scope": "Mock teacher transport, real Qwen3 tokenizer, tiny random Qwen3 CPU training; no paid API or full pretrained/GPU experiment",
+  "checks": [
+    "notebook schema/syntax",
+    "exact baseline split and manifest import",
+    "teacher never receives gold labels or held-out rows",
+    "cache reuse without API key",
+    "incomplete-cache failure",
+    "JSON and truncation handling",
+    "agreement/quote/target/length filters",
+    "all original rows retained",
+    "per-example token-normalized auxiliary loss",
+    "padding masks and token limits",
+    "three actual Trainer runs",
+    "identical initial adapters and optimizer steps",
+    "auxiliary supervision changes learned weights",
+    "classifier inference alignment",
+    "adapter reload",
+    "smoke skips test",
+    "comparison/bootstrap/ZIP on fixture"
+  ],
+  "split_counts": {
+    "train": 473,
+    "validation": 118,
+    "test": 397
+  },
+  "versions": {
+    "torch": "2.8.0+cpu",
+    "transformers": "4.57.1",
+    "peft": "0.17.1",
+    "accelerate": "1.10.1",
+    "numpy": "2.0.2",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.6.1",
+    "matplotlib": "3.10.6",
+    "ftfy": "6.3.1"
+  }
+}

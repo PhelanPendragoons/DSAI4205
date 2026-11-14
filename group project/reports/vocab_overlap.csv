@@ -1,0 +1,7 @@
+﻿class_a,class_b,shared_words,jaccard
+Negative,Positive,57,0.257
+Negative,Irrelevant,39,0.217
+Negative,Neutral,53,0.252
+Positive,Irrelevant,47,0.315
+Positive,Neutral,55,0.297
+Irrelevant,Neutral,35,0.241

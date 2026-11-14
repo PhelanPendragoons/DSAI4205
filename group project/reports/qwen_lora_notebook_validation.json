@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "validation_scope": "Real Qwen3 tokenizer + tiny randomly initialized Qwen3 on CPU; not pretrained-model/GPU validation",
+  "checks": [
+    "notebook schema and syntax",
+    "embedded dataset hashes and counts",
+    "group-disjoint split",
+    "no normalized train/test overlap",
+    "long-input truncation",
+    "answer-only and padding masks",
+    "actual Trainer forward/backward and checkpoint selection",
+    "LoRA parameters updated; base frozen",
+    "causal next-token metric alignment",
+    "label-free inference equivalence",
+    "smoke mode skips test",
+    "test reporting and TF-IDF comparison on fixture",
+    "adapter save/reload equivalence",
+    "ZIP export"
+  ],
+  "versions": {
+    "torch": "2.8.0+cpu",
+    "transformers": "4.57.1",
+    "peft": "0.17.1",
+    "accelerate": "1.10.1",
+    "numpy": "2.0.2",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.6.1",
+    "matplotlib": "3.10.6",
+    "ftfy": "6.3.1"
+  },
+  "split_counts": {
+    "train": 473,
+    "validation": 118,
+    "test": 397
+  }
+}

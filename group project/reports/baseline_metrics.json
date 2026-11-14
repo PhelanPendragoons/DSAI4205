@@ -1,0 +1,368 @@
+{
+  "model": "TfidfVectorizer(1-2 grams, min_df=2, sublinear_tf) + LogisticRegression(C=1)",
+  "train_rows": 591,
+  "test_rows": 397,
+  "vocabulary_size": 1951,
+  "full_test": {
+    "n": 397,
+    "accuracy": 0.5063,
+    "macro_precision": 0.533,
+    "macro_recall": 0.4693,
+    "macro_f1": 0.4662,
+    "weighted_precision": 0.5211,
+    "weighted_recall": 0.5063,
+    "weighted_f1": 0.4879,
+    "per_class": [
+      {
+        "label": "Negative",
+        "precision": 0.5266,
+        "recall": 0.7417,
+        "f1": 0.6159,
+        "support": 120
+      },
+      {
+        "label": "Positive",
+        "precision": 0.4404,
+        "recall": 0.4528,
+        "f1": 0.4465,
+        "support": 106
+      },
+      {
+        "label": "Irrelevant",
+        "precision": 0.65,
+        "recall": 0.197,
+        "f1": 0.3023,
+        "support": 66
+      },
+      {
+        "label": "Neutral",
+        "precision": 0.5152,
+        "recall": 0.4857,
+        "f1": 0.5,
+        "support": 105
+      }
+    ]
+  },
+  "test_without_overlap_row": {
+    "n": 396,
+    "accuracy": 0.5076,
+    "macro_precision": 0.5338,
+    "macro_recall": 0.4705,
+    "macro_f1": 0.4673,
+    "weighted_precision": 0.522,
+    "weighted_recall": 0.5076,
+    "weighted_f1": 0.4892,
+    "per_class": [
+      {
+        "label": "Negative",
+        "precision": 0.5298,
+        "recall": 0.7417,
+        "f1": 0.6181,
+        "support": 120
+      },
+      {
+        "label": "Positive",
+        "precision": 0.4404,
+        "recall": 0.4528,
+        "f1": 0.4465,
+        "support": 106
+      },
+      {
+        "label": "Irrelevant",
+        "precision": 0.65,
+        "recall": 0.197,
+        "f1": 0.3023,
+        "support": 66
+      },
+      {
+        "label": "Neutral",
+        "precision": 0.5152,
+        "recall": 0.4904,
+        "f1": 0.5025,
+        "support": 104
+      }
+    ]
+  },
+  "top_coefficients": {
+    "Negative": {
+      "towards_class": [
+        {
+          "term": "fuck",
+          "weight": 1.434
+        },
+        {
+          "term": "still",
+          "weight": 1.083
+        },
+        {
+          "term": "not",
+          "weight": 0.993
+        },
+        {
+          "term": "shit",
+          "weight": 0.901
+        },
+        {
+          "term": "atmention",
+          "weight": 0.9
+        },
+        {
+          "term": "is",
+          "weight": 0.875
+        },
+        {
+          "term": "fix",
+          "weight": 0.796
+        },
+        {
+          "term": "game",
+          "weight": 0.724
+        }
+      ],
+      "against_class": [
+        {
+          "term": "love",
+          "weight": -1.156
+        },
+        {
+          "term": "so",
+          "weight": -0.7
+        },
+        {
+          "term": "great",
+          "weight": -0.621
+        },
+        {
+          "term": "as",
+          "weight": -0.584
+        },
+        {
+          "term": "thank",
+          "weight": -0.557
+        },
+        {
+          "term": "best",
+          "weight": -0.521
+        },
+        {
+          "term": "some",
+          "weight": -0.52
+        },
+        {
+          "term": "happy",
+          "weight": -0.49
+        }
+      ]
+    },
+    "Positive": {
+      "towards_class": [
+        {
+          "term": "love",
+          "weight": 1.109
+        },
+        {
+          "term": "so",
+          "weight": 0.973
+        },
+        {
+          "term": "assassin creed",
+          "weight": 0.751
+        },
+        {
+          "term": "creed",
+          "weight": 0.751
+        },
+        {
+          "term": "assassin",
+          "weight": 0.751
+        },
+        {
+          "term": "be",
+          "weight": 0.726
+        },
+        {
+          "term": "much",
+          "weight": 0.695
+        },
+        {
+          "term": "well",
+          "weight": 0.694
+        }
+      ],
+      "against_class": [
+        {
+          "term": "fuck",
+          "weight": -0.772
+        },
+        {
+          "term": "player",
+          "weight": -0.688
+        },
+        {
+          "term": "in",
+          "weight": -0.655
+        },
+        {
+          "term": "on",
+          "weight": -0.622
+        },
+        {
+          "term": "him",
+          "weight": -0.587
+        },
+        {
+          "term": "not",
+          "weight": -0.58
+        },
+        {
+          "term": "get",
+          "weight": -0.568
+        },
+        {
+          "term": "just",
+          "weight": -0.535
+        }
+      ]
+    },
+    "Irrelevant": {
+      "towards_class": [
+        {
+          "term": "player",
+          "weight": 1.084
+        },
+        {
+          "term": "with",
+          "weight": 0.812
+        },
+        {
+          "term": "him",
+          "weight": 0.765
+        },
+        {
+          "term": "you",
+          "weight": 0.713
+        },
+        {
+          "term": "atmention atmention",
+          "weight": 0.708
+        },
+        {
+          "term": "mean",
+          "weight": 0.698
+        },
+        {
+          "term": "csgo",
+          "weight": 0.659
+        },
+        {
+          "term": "their",
+          "weight": 0.658
+        }
+      ],
+      "against_class": [
+        {
+          "term": "this",
+          "weight": -0.65
+        },
+        {
+          "term": "johnson",
+          "weight": -0.585
+        },
+        {
+          "term": "come",
+          "weight": -0.505
+        },
+        {
+          "term": "new",
+          "weight": -0.504
+        },
+        {
+          "term": "year",
+          "weight": -0.5
+        },
+        {
+          "term": "microsoft",
+          "weight": -0.483
+        },
+        {
+          "term": "have",
+          "weight": -0.473
+        },
+        {
+          "term": "game",
+          "weight": -0.462
+        }
+      ]
+    },
+    "Neutral": {
+      "towards_class": [
+        {
+          "term": "johnson",
+          "weight": 0.883
+        },
+        {
+          "term": "microsoft",
+          "weight": 0.842
+        },
+        {
+          "term": "here",
+          "weight": 0.819
+        },
+        {
+          "term": "amazon",
+          "weight": 0.781
+        },
+        {
+          "term": "rank",
+          "weight": 0.699
+        },
+        {
+          "term": "at",
+          "weight": 0.688
+        },
+        {
+          "term": "news",
+          "weight": 0.683
+        },
+        {
+          "term": "in",
+          "weight": 0.679
+        }
+      ],
+      "against_class": [
+        {
+          "term": "atmention",
+          "weight": -1.054
+        },
+        {
+          "term": "fuck",
+          "weight": -0.876
+        },
+        {
+          "term": "is",
+          "weight": -0.782
+        },
+        {
+          "term": "all",
+          "weight": -0.664
+        },
+        {
+          "term": "am",
+          "weight": -0.604
+        },
+        {
+          "term": "play",
+          "weight": -0.569
+        },
+        {
+          "term": "still",
+          "weight": -0.562
+        },
+        {
+          "term": "do",
+          "weight": -0.558
+        }
+      ]
+    }
+  }
+}

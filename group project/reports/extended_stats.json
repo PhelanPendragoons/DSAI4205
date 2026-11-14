@@ -1,0 +1,42 @@
+{
+  "split_similarity": {
+    "label_chi2": 0.697,
+    "label_p": 0.8739879483449726,
+    "length_u": 117474.0,
+    "length_p": 0.9709602757129772,
+    "train_median_words": 17.0,
+    "test_median_words": 18.0
+  },
+  "strongest_correlations": [
+    {
+      "feature_a": "Word count",
+      "feature_b": "Character count",
+      "r": 0.952
+    },
+    {
+      "feature_a": "Character count",
+      "feature_b": "Mention count",
+      "r": 0.302
+    },
+    {
+      "feature_a": "Exclamation marks",
+      "feature_b": "Capital-letter ratio",
+      "r": 0.282
+    },
+    {
+      "feature_a": "Word count",
+      "feature_b": "Mention count",
+      "r": 0.24
+    },
+    {
+      "feature_a": "Character count",
+      "feature_b": "Question marks",
+      "r": 0.211
+    },
+    {
+      "feature_a": "Word count",
+      "feature_b": "Question marks",
+      "r": 0.197
+    }
+  ]
+}
