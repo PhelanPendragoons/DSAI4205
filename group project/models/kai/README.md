@@ -6,15 +6,34 @@
 
 ## 在 Colab 运行
 
-三组 Qwen 实验共用一个 notebook。在 Colab 选择 GPU，在首格的 `RUN_MODE` 下拉框选择实验，再点「全部运行」。[打开 Colab](https://colab.research.google.com/github/once123456/DSAI4205/blob/main/group%20project/notebooks/kai/Kai_Sentiment_Experiments.ipynb) · [查看 notebook](../../notebooks/kai/Kai_Sentiment_Experiments.ipynb)
+三种训练方法及其等量对照共用一个 notebook。在 Colab 选择 GPU，在首格的 `RUN_MODE` 下拉框选择实验，再点「全部运行」。[打开 Colab](https://colab.research.google.com/github/once123456/DSAI4205/blob/main/group%20project/notebooks/kai/Kai_Sentiment_Experiments.ipynb) · [查看 notebook](../../notebooks/kai/Kai_Sentiment_Experiments.ipynb)
 
 | RUN_MODE | 模型与实验 |
 |---|---|
 | `label-only` | [原始标签 LoRA 微调](label-only/README.md)，按验证集 macro-F1 早停 |
 | `rationale-distillation` | [短解释蒸馏](rationale-distillation/README.md)，比较原始标签、未筛选解释和筛选解释三种训练方式 |
 | `counterfactual` | [反事实增强](counterfactual/README.md)，比较仅用筛选解释训练与加入情感翻转样本后的表现 |
+| `rationale-matched` | 固定解释条数和各类数量，比较严格筛选与随机抽取 |
+| `counterfactual-matched` | 固定改写条数，比较平衡和原比例的翻转方向 |
 
 首次生成解释时，在 Colab Secrets 中设置 `TEACHER_API_KEY`，运行解释蒸馏并保留导出的 ZIP。接着运行反事实实验，将 `DISTILLATION_EXPORT` 指向该 ZIP，即可沿用同一份数据划分和教师解释缓存。首次生成反事实样本也会调用教师 API。
+
+### 在单张 5090 上跑等量对照
+
+在之前训练成功的 Python 环境中更新仓库，保留原来的 `runs/kai/`。在同一 notebook 首格选择 `rationale-matched` 并运行全部单元，然后重启内核，选择 `counterfactual-matched` 再运行。两个模式都读取既有教师记录，每次只训练一个学生。也可以在 `group project` 目录执行以下命令。
+
+```bash
+python models/kai/run_local.py --mode rationale-matched
+python models/kai/run_local.py --mode counterfactual-matched
+```
+
+默认从 `runs/kai/last_rationale_distillation.json` 和 `last_counterfactual.json` 定位各自的完整导出。迁移过文件时，在配置格填写 `PRIOR_EXPORT`，或在命令末尾加 `--prior-export "实际路径"`。解释对照选择上次的 `qwen3_rationale_distillation.zip`，翻转对照选择 `qwen3_counterfactual.zip`。也支持对应的解压目录或运行目录。导出需含原划分、协议和教师解释记录，反事实导出还需含 `accepted_counterfactuals.csv`。公开仓库里的摘要和运行指针不足以还原逐条教师结果。
+
+解释组先应用学生的 token 长度限制，再按人工类别确定配额。如果上一轮的 193 条严格解释全部可用，两组各取 Negative 84、Positive 78、Irrelevant 6、Neutral 25。随机池包含通过严格筛选的行，两组允许重合。所有原始训练行都保留分类监督。
+
+翻转组沿用同一组原始标签与严格解释。每组的改写数等于较少方向样本数的两倍。上一轮共有 14 条负转正、32 条正转负，对应平衡组 14/14、原比例组 9/19（方向依次为负转正、正转负）。同方向共享随机顺序，以尽量复用同一批父样本。
+
+结果分别写入 `runs/kai/qwen_rationale_matched_runs/` 和 `runs/kai/qwen_cf_matched_runs/`。先看 `matched_counts.csv` 和 `matched_selection.csv` 核对实际配额与样本，再看 `comparison.csv` 和 `paired_bootstrap.csv`。差值方向分别为严格减随机、平衡减原比例。默认抽样种子 `MATCH_SEED=42` 与学生训练种子 `SEEDS=[42]` 分开记录。复查抽样敏感性可更改 `MATCH_SEED`（命令行 `--match-seed`）并开启新运行。
 
 ## 数据与评估
 
@@ -32,7 +51,7 @@ Qwen 的测试结果由 Colab 运行后导出。要与小组的线性基线比�
 
 **已验证的结果。** 本地用缩小的 Qwen3 在 CPU 上跑通了三种模式。原始标签流程检查覆盖数据划分、LoRA 参数更新和 adapter 重载。蒸馏与反事实流程用模拟教师或缓存检查筛选、对照训练和结果导出。[原始标签检查记录](../../reports/qwen_lora_notebook_validation.json) · [蒸馏检查记录](../../reports/qwen_distillation_notebook_validation.json) · [反事实检查脚本](counterfactual/validate.py)
 
-**正式测试结果。** 仓库目前尚未收录预训练 Qwen3-0.6B 在全部 397 条测试推文上的正式成绩，解释筛选和反事实增强的性能增益仍待验证。完整运行后，原始标签组的指标在 `test_metrics.json` 中。蒸馏和增强实验分别导出 `comparison.csv`、各类别报告和 `paired_bootstrap.csv`，后者给出同一随机种子下测试 macro-F1 差值的 95% 配对重采样区间。跨训练种子的波动另看 `comparison_aggregate.csv`。
+**正式测试结果。** 固定划分上的独立原始标签 LoRA 测试 macro-F1 为 0.4850，共享 TF-IDF 基线为 0.4461。蒸馏实验中，格式有效解释组相对该次原始标签对照提高 0.0141。反事实实验中，加入 46 条核验通过的改写相对该次仅解释对照提高 0.0017。两项差值的 95% 配对区间都跨过零。各次实验采用 seed 42。[三组运行摘要](../../runs/kai/)
 
 ## 修改和构建
 

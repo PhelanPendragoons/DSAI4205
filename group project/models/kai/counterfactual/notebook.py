@@ -44,6 +44,7 @@ DISTILLATION_EXPORT 可指向上一版的 ZIP 或已解压的结果目录。导�
 ALLOW_CF_REQUESTS 单独控制反事实请求。把 SEEDS 改为 [42, 43, 44] 可运行三个随机种子。SMOKE_TEST 仅缩短学生训练。
 """)
 config = replace_once(source["config"], "RUN_UNFILTERED = True", '''DISTILLATION_EXPORT = ""
+PRIOR_EXTRA_FILES = ()
 CF_MAX_PARENTS = 80
 CF_SELECTION_SEED = 42
 CF_WEIGHT = 0.5
@@ -61,10 +62,10 @@ add("code", "config", config)
 add("code", "import-export", r'''
 import zipfile
 
-def read_prior_export(path, destination):
-    """Read just the protocol, split and teacher JSON shards from the previous export."""
+def read_prior_export(path, destination, extra_files=()):
+    """Read only the protocol, split, teacher responses and requested audit files."""
     def wanted(name):
-        return name in {"experiment_protocol.json", "split_manifest.csv", "split_fingerprint.json"} or bool(
+        return name in {"experiment_protocol.json", "split_manifest.csv", "split_fingerprint.json", *extra_files} or bool(
             re.fullmatch(r"teacher_cache/[0-9a-f]{64}\.json", name))
     destination.mkdir(parents=True, exist_ok=True)
     def copy_member(name, raw):
@@ -72,7 +73,7 @@ def read_prior_export(path, destination):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(raw)
     if path.is_dir():
-        for member in [*path.glob("*.json"), path / "split_manifest.csv", *(path / "teacher_cache").glob("*.json")]:
+        for member in [*path.glob("*.json"), *path.glob("*.csv"), *(path / "teacher_cache").glob("*.json")]:
             name = member.relative_to(path).as_posix()
             if wanted(name):
                 copy_member(name, member.read_bytes())
@@ -90,15 +91,32 @@ def read_prior_export(path, destination):
 
 prior_protocol = None
 if DISTILLATION_EXPORT:
-    imported = RUN_DIR / "prior_import"
-    prior_protocol = read_prior_export(Path(DISTILLATION_EXPORT), imported)
+    if PRIOR_EXTRA_FILES:
+        from tempfile import mkdtemp
+        imported = Path(mkdtemp(prefix="prior_import_", dir=RUN_DIR))
+    else:
+        imported = RUN_DIR / "prior_import"
+    prior_protocol = read_prior_export(Path(DISTILLATION_EXPORT), imported, PRIOR_EXTRA_FILES)
     SPLIT_MANIFEST_PATH = str(imported / "split_manifest.csv")
     # Merge by content address into persistent storage so later runs can resume.
+    if PRIOR_EXTRA_FILES:
+        CACHE_ROOT = imported / "teacher_cache"
+        CACHE_ROOT.mkdir(exist_ok=True)
+        responses = imported / "teacher_responses.json"
+        if responses.is_file():
+            for record in json.loads(responses.read_text(encoding="utf-8")):
+                key = record["request_key"]
+                if not re.fullmatch(r"[0-9a-f]{64}", key):
+                    raise ValueError("导入的教师记录缺少有效的请求指纹。")
+                shard = CACHE_ROOT / (key + ".json")
+                if not shard.exists():
+                    shard.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
     for shard in (imported / "teacher_cache").glob("*.json"):
         rec = json.loads(shard.read_text(encoding="utf-8"))
         if rec.get("request_key") != shard.stem:
             raise ValueError(f"教师缓存标识不匹配 {shard.name}")
-        shutil.copy2(shard, CACHE_ROOT / shard.name)
+        if not PRIOR_EXTRA_FILES:
+            shutil.copy2(shard, CACHE_ROOT / shard.name)
     MODEL_ID, MODEL_REVISION = prior_protocol["model_id"], prior_protocol["model_revision"]
     TEACHER_BASE_URL = prior_protocol["teacher_base_url"]
     settings = prior_protocol["teacher_body_example_without_text"]
@@ -301,6 +319,10 @@ display(cf_audit[["source_text", "cf_text", "accepted", "reason"]].head(10))
 print("本次反事实请求", client.calls, "缓存命中", client.hits)
 if accepted_cf.empty:
     raise ValueError("没有通过核验的反事实样本。请查看 cf_audit.csv 后再开始对照实验。")
+cf_run_info = {"selection_seed": CF_SELECTION_SEED, "parent_limit": CF_MAX_PARENTS,
+               "max_span_words": CF_MAX_SPAN_WORDS, "weight": CF_WEIGHT, "edit_prompt": EDIT_PROMPT,
+               "verify_prompt": VERIFY_PROMPT, "attempted_parents": len(parents), "accepted": len(accepted_cf),
+               "api_calls_this_run": client.calls, "cache_hits_this_run": client.hits}
 ''')
 add("markdown", "training-note", """
 ## 两组学生训练
@@ -317,6 +339,7 @@ class CounterfactualDataset(torch.utils.data.Dataset):
         assert len(by_id) == len(accepted) and set(by_id) <= set(parent_ids)
         self.counterfactuals = [by_id.get(row_id) for row_id in parent_ids]
         self.aux_count = original.aux_count
+        self.cf_count = len(by_id)
     def __len__(self):
         return len(self.original)
     def __getitem__(self, index):
@@ -350,11 +373,8 @@ experiments = replace_once(source["experiments"], "trainer = RationaleTrainer(",
 experiments = replace_once(experiments, "data_collator=collate_pairs", "data_collator=collate_with_counterfactuals")
 experiments = replace_once(experiments, '0.0 if name == "label_only" else RATIONALE_WEIGHT', 'RATIONALE_WEIGHT')
 experiments = replace_once(experiments, '"rationale_rows": paired_datasets[name].aux_count,', '''"rationale_rows": paired_datasets[name].aux_count,
-               "original_rows": len(train_df), "cf_rows": len(accepted_cf) if name == AUGMENTED else 0,''')
-experiments = replace_once(experiments, 'write_json(RUN_DIR / "experiment_protocol.json", protocol)', '''protocol["counterfactual"] = {"selection_seed": CF_SELECTION_SEED, "parent_limit": CF_MAX_PARENTS,
-    "max_span_words": CF_MAX_SPAN_WORDS, "weight": CF_WEIGHT, "edit_prompt": EDIT_PROMPT, "verify_prompt": VERIFY_PROMPT,
-    "attempted_parents": len(parents), "accepted": len(accepted_cf), "api_calls_this_run": client.calls,
-    "cache_hits_this_run": client.hits}
+               "original_rows": len(train_df), "cf_rows": getattr(paired_datasets[name], "cf_count", 0),''')
+experiments = replace_once(experiments, 'write_json(RUN_DIR / "experiment_protocol.json", protocol)', '''protocol["counterfactual"] = cf_run_info
 write_json(RUN_DIR / "experiment_protocol.json", protocol)''')
 add("code", "experiments", experiments)
 add("markdown", "test-note", """

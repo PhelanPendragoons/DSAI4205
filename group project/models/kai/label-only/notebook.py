@@ -124,6 +124,8 @@ def local_runs_root():
             return (base / "runs" / "kai").resolve()
         if (base / "data" / "processed").is_dir():
             return (base / "runs" / "kai").resolve()
+        if (base / "group project" / "models" / "kai").is_dir():
+            return (base / "group project" / "runs" / "kai").resolve()
     return (here / "runs" / "kai").resolve()
 
 def load_kai_env(path=None):

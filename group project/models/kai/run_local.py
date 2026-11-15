@@ -60,9 +60,12 @@ def _cell_source(cell) -> str:
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", required=True,
-                        choices=["label-only", "rationale-distillation", "counterfactual"])
+                        choices=["label-only", "rationale-distillation", "counterfactual",
+                                 "rationale-matched", "counterfactual-matched"])
     parser.add_argument("--distillation-export", default="",
                         help="Stage-2: path to stage-1 ZIP or extracted folder")
+    parser.add_argument("--prior-export", default="", help="Matched arms: previous run ZIP or directory")
+    parser.add_argument("--match-seed", type=int, default=42, help="Matched arms: seed for sampling training rows")
     parser.add_argument("--skip-install", action="store_true", default=True)
     parser.add_argument("--install", dest="skip_install", action="store_false")
     parser.add_argument("--rebuild", action="store_true", help="Rebuild the unified notebook first")
@@ -72,7 +75,7 @@ def main(argv=None):
 
     _load_env()
     if not (os.environ.get("TEACHER_API_KEY") or os.environ.get("DEEPSEEK_API_KEY")):
-        if args.mode != "label-only":
+        if args.mode in {"rationale-distillation", "counterfactual"}:
             raise SystemExit("缺少 TEACHER_API_KEY / DEEPSEEK_API_KEY（检查 models/kai/.env）")
 
     build = runpy.run_path(str(HERE / "build_notebook.py"))
@@ -107,12 +110,12 @@ def main(argv=None):
             print("[run_local] skip install", flush=True)
             continue
         if cid == "mode":
-            source = (
-                f'RUN_MODE = {args.mode!r}\n'
-                'if RUN_MODE not in {"label-only", "rationale-distillation", "counterfactual"}:\n'
-                '    raise ValueError("请选择表中的运行模式。")\n'
-                'print("本次运行", RUN_MODE)\n'
-            )
+            source = source.replace('RUN_MODE = "label-only"', f"RUN_MODE = {args.mode!r}", 1)
+        if cid == "config" and args.mode.endswith("-matched"):
+            path = args.prior_export or args.distillation_export
+            if path:
+                source = source.replace('PRIOR_EXPORT = ""', f"PRIOR_EXPORT = {str(Path(path).expanduser().resolve())!r}", 1)
+            source = source.replace("MATCH_SEED = 42", f"MATCH_SEED = {args.match_seed}", 1)
         if cid == "config" and args.distillation_export:
             export = str(Path(args.distillation_export).expanduser().resolve())
             if 'DISTILLATION_EXPORT = ""' not in source:
