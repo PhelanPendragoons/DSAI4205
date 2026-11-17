@@ -66,6 +66,8 @@ def main(argv=None):
                         help="Stage-2: path to stage-1 ZIP or extracted folder")
     parser.add_argument("--prior-export", default="", help="Matched arms: previous run ZIP or directory")
     parser.add_argument("--match-seed", type=int, default=42, help="Matched arms: seed for sampling training rows")
+    parser.add_argument("--seeds", default="",
+                        help="Comma-separated student training seeds, e.g. 42,43,44 (overrides notebook SEEDS)")
     parser.add_argument("--skip-install", action="store_true", default=True)
     parser.add_argument("--install", dest="skip_install", action="store_false")
     parser.add_argument("--rebuild", action="store_true", help="Rebuild the unified notebook first")
@@ -111,6 +113,16 @@ def main(argv=None):
             continue
         if cid == "mode":
             source = source.replace('RUN_MODE = "label-only"', f"RUN_MODE = {args.mode!r}", 1)
+        if cid == "config" and args.seeds:
+            seed_list = [int(part.strip()) for part in args.seeds.split(",") if part.strip()]
+            if not seed_list:
+                raise SystemExit("--seeds 需要至少一个整数，例如 42,43,44")
+            import re
+            updated, n = re.subn(r"SEEDS = \[[^\]]*\]", f"SEEDS = {seed_list!r}", source, count=1)
+            if n != 1:
+                raise RuntimeError("config cell missing SEEDS assignment")
+            source = updated
+            print(f"[run_local] SEEDS = {seed_list}", flush=True)
         if cid == "config" and args.mode.endswith("-matched"):
             path = args.prior_export or args.distillation_export
             if path:

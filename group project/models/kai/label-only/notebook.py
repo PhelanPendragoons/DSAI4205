@@ -185,6 +185,7 @@ TRAIN_BATCH_SIZE = 2
 EVAL_BATCH_SIZE = 4
 GRAD_ACCUMULATION = 8
 EPOCHS = 8
+EARLY_STOPPING_PATIENCE = 3
 LEARNING_RATE = 1e-4
 LORA_R = 16
 LORA_ALPHA = 32
@@ -435,7 +436,7 @@ trainer = Trainer(
     model=model, args=training_args, train_dataset=train_dataset, eval_dataset=val_dataset,
     processing_class=tokenizer, data_collator=collate_examples,
     compute_metrics=compute_metrics, preprocess_logits_for_metrics=preprocess_logits_for_metrics,
-    callbacks=[EarlyStoppingCallback(early_stopping_patience=3)],
+    callbacks=[EarlyStoppingCallback(early_stopping_patience=EARLY_STOPPING_PATIENCE)],
 )
 run_config = {
     "method": "original-label LoRA SFT; code and EOS supervision; no teacher or synthetic data",
@@ -445,6 +446,8 @@ run_config = {
     "system_prompt": SYSTEM_PROMPT, "enable_thinking": False,
     "train_rows": len(train_df), "validation_rows": len(val_df),
     "smoke_test": SMOKE_TEST, "versions": VERSIONS,
+    "early_stopping_patience": EARLY_STOPPING_PATIENCE,
+    "selection_metric": "validation_macro_f1", "selection_split": "validation",
     "dtype": str(MODEL_DTYPE), "lora": json.loads(json.dumps(lora_config.to_dict(), default=lambda x: sorted(x) if isinstance(x, set) else str(x))),
     "training_arguments": training_args.to_dict(),
 }
@@ -453,9 +456,12 @@ torch.cuda.reset_peak_memory_stats()
 started = time.perf_counter()
 train_result = trainer.train()
 training_seconds = time.perf_counter() - started
+assert trainer.state.best_model_checkpoint is not None, "未选出验证集最佳 checkpoint，禁止汇报末步权重。"
+assert trainer.state.best_metric is not None and np.isfinite(trainer.state.best_metric)
 val_metrics = trainer.evaluate()
 assert np.isfinite(train_result.training_loss), "训练损失非有限值，请检查混合精度或降低学习率。"
 assert np.isfinite(val_metrics["eval_loss"]), "验证损失非有限值，不能使用此模型。"
+assert abs(float(val_metrics["eval_macro_f1"]) - float(trainer.state.best_metric)) < 1e-5
 write_json(RUN_DIR / "validation_metrics.json", val_metrics)
 write_json(RUN_DIR / "training_log.json", trainer.state.log_history)
 print("最佳 checkpoint:", trainer.state.best_model_checkpoint)
@@ -506,7 +512,7 @@ display(pd.DataFrame({"text": probe.text, "true": probe.Sentiment.map(dict(enume
 
 md('''
 ## 8. 最终测试
-模型已按验证集选定；此处才读取测试标签，不能据此继续选参数。
+模型已按**验证集 macro-F1**选定最佳 checkpoint；此处才读取测试标签，**禁止**据此继续选参数或改 checkpoint。
 输出 accuracy、macro-F1、每类指标、混淆矩阵和逐条预测。
 已有标记的 1 条历史跨集重复在当前训练池中已删除：主指标仍用全部 397 条，
 另外输出去掉历史标记行的敏感性结果，便于对照旧报告。

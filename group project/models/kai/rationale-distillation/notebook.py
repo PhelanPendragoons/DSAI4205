@@ -27,9 +27,9 @@ md("intro", '''
 默认依次训练三组：**label_only**（原始标签）、**rationale_unfiltered**（仅格式检查）、
 **rationale_filtered**（加一致性、标签和原文证据筛选）。可关闭中间一组以节省 GPU 时间。
 每组从同一个基础模型 revision 和相同 seed 初始化，使用相同原始样本顺序、batch、
-epoch 上限与学习率。辅助任务增加前向计算和 token 数，故并非计算量完全相同。
-为固定优化步数，本版三组都运行固定 epoch，再按验证 macro-F1 选最佳 checkpoint；
-不会从已微调的 baseline 接着训练，也不会根据测试集挑参数。
+epoch 上限、学习率与早停耐心。辅助任务增加前向计算和 token 数，故并非计算量完全相同。
+各组按**验证集 macro-F1**选取最佳 checkpoint（`load_best_model_at_end` + 早停），
+再在测试集上评估一次；不会从已微调的 baseline 接着训练，也**不会根据测试集挑参数**。
 
 ### Colab 操作
 1. 上传本文件，启用 T4 或其他 NVIDIA GPU，先安装依赖。
@@ -49,10 +49,11 @@ md("config-note", '''
 `SPLIT_MANIFEST_PATH` 可指向第一版导出的 CSV；默认用完全相同的种子与算法重建，
 并验证固定样本数。若第一版修改过划分种子，必须提供它的清单。
 教师缓存可上传后解压，令 `TEACHER_CACHE_ROOT` 指向解压的 `teacher_cache`。
-`SEEDS=[42]` 是单次初试，正式报告建议 `[42,43,44]`。
+默认 `SEEDS=[42, 43, 44]`：报告 mean±std、最佳单 seed，以及相对 label_only 的平均差值与 bootstrap CI。
 ''')
 config = src["config"].replace('RUN_RELOAD_CHECK = True', '''RUN_RELOAD_CHECK = True
-SEEDS = [42]
+SEEDS = [42, 43, 44]
+EARLY_STOPPING_PATIENCE = 3
 RUN_UNFILTERED = True
 RATIONALE_WEIGHT = 0.5
 SPLIT_MANIFEST_PATH = ""
@@ -404,7 +405,7 @@ md("experiments-note", '''
 ## 4. 依次训练独立对照组
 一次只加载一个模型。相同 seed 下，三组的初始 LoRA 权重和分类 DataLoader 顺序相同。
 解释前向会额外消耗随机数和计算，故不会声称训练轨迹完全一致。
-所有模型训练与验证选型完成后才进入最终测试单元。
+所有模型按验证 macro-F1 选型完成后才进入最终测试单元。
 `SMOKE_TEST=True` 每组只做两个优化步骤并跳过测试集，不用于报告结果。
 ''')
 code("experiments", '''
@@ -429,17 +430,25 @@ def run_experiment(name, seed):
         save_total_limit=2, eval_accumulation_steps=1, report_to="none", seed=seed, data_seed=seed,
         dataloader_num_workers=0, remove_unused_columns=False, label_names=["labels"],
     )
+    callbacks = []
+    if not SMOKE_TEST:
+        callbacks.append(EarlyStoppingCallback(early_stopping_patience=EARLY_STOPPING_PATIENCE))
     trainer = RationaleTrainer(model=model, args=args,
         rationale_weight=0.0 if name == "label_only" else RATIONALE_WEIGHT,
         train_dataset=paired_datasets[name], eval_dataset=val_dataset,
         processing_class=tokenizer, data_collator=collate_pairs,
-        compute_metrics=compute_metrics, preprocess_logits_for_metrics=preprocess_logits_for_metrics)
+        compute_metrics=compute_metrics, preprocess_logits_for_metrics=preprocess_logits_for_metrics,
+        callbacks=callbacks)
     if torch.cuda.is_available(): torch.cuda.reset_peak_memory_stats()
     start = time.perf_counter()
     result = trainer.train()
     elapsed = time.perf_counter() - start
+    assert trainer.state.best_model_checkpoint is not None, "未选出验证集最佳 checkpoint，禁止回退到末步权重。"
+    assert trainer.state.best_metric is not None and np.isfinite(trainer.state.best_metric)
     validation = trainer.evaluate()
     assert np.isfinite(result.training_loss) and np.isfinite(validation["eval_loss"])
+    # evaluate() 跑在已加载的最佳 checkpoint 上；与 Trainer 记录的 best_metric 应对齐。
+    assert abs(float(validation["eval_macro_f1"]) - float(trainer.state.best_metric)) < 1e-6
     probe = val_df.iloc[:4]
     scores = trainer.predict(SentimentDataset(probe)).predictions
     _, probs, _ = predict_texts(model, probe.text.tolist())
@@ -448,17 +457,22 @@ def run_experiment(name, seed):
         print("警告: Trainer.predict 与 predict_texts 概率偏差",
               float(np.max(np.abs(probs - score_probs))))
     adapter = out / "adapter"
-    trainer.save_model(str(adapter))
+    trainer.save_model(str(adapter))  # 已是验证 macro-F1 最佳 adapter，不是最后一个 epoch。
     tokenizer.save_pretrained(adapter)
     write_json(out / "training_log.json", trainer.state.log_history)
     write_json(out / "validation_metrics.json", validation)
     summary = {"experiment": name, "seed": seed, "adapter": str(adapter),
-               "initial_adapter_hash": initial_hash.hexdigest(), "validation_macro_f1": validation["eval_macro_f1"],
+               "initial_adapter_hash": initial_hash.hexdigest(),
+               "validation_macro_f1": float(validation["eval_macro_f1"]),
+               "best_validation_macro_f1": float(trainer.state.best_metric),
                "training_seconds": elapsed, "optimizer_steps": trainer.state.global_step,
                "selected_checkpoint": trainer.state.best_model_checkpoint,
+               "early_stopping_patience": None if SMOKE_TEST else EARLY_STOPPING_PATIENCE,
                "rationale_rows": paired_datasets[name].aux_count,
                "peak_gpu_gib": torch.cuda.max_memory_allocated() / 2**30 if torch.cuda.is_available() else None}
     write_json(out / "summary.json", summary)
+    print(name, "seed", seed, "best ckpt:", trainer.state.best_model_checkpoint,
+          "val macro-F1:", round(float(trainer.state.best_metric), 4))
     del trainer, model
     gc.collect()
     if torch.cuda.is_available(): torch.cuda.empty_cache()
@@ -480,7 +494,9 @@ protocol = {"model_id": MODEL_ID, "model_revision": RESOLVED_REVISION, "split_ha
             "teacher_model": TEACHER_MODEL, "teacher_base_url": TEACHER_BASE_URL,
             "teacher_body_example_without_text": teacher_body("[tweet omitted]", "a"),
             "teacher_variants": TEACHER_VARIANTS, "versions": VERSIONS,
-            "epochs": EPOCHS, "learning_rate": LEARNING_RATE, "batch_size": TRAIN_BATCH_SIZE,
+            "epochs": EPOCHS, "early_stopping_patience": EARLY_STOPPING_PATIENCE,
+            "selection_metric": "validation_macro_f1", "selection_split": "validation",
+            "learning_rate": LEARNING_RATE, "batch_size": TRAIN_BATCH_SIZE,
             "gradient_accumulation": GRAD_ACCUMULATION, "lora_r": LORA_R, "lora_alpha": LORA_ALPHA,
             "lora_dropout": LORA_DROPOUT, "smoke_test": SMOKE_TEST,
             "filter": {"min_words": RATIONALE_MIN_WORDS, "max_words": RATIONALE_MAX_WORDS,
@@ -500,15 +516,18 @@ for seed in SEEDS:
 write_json(RUN_DIR / "experiment_summaries.json", summaries)
 summary_df = pd.DataFrame(summaries)
 assert summary_df.groupby("seed").initial_adapter_hash.nunique().eq(1).all()
-assert summary_df.groupby("seed").optimizer_steps.nunique().eq(1).all()
-display(summary_df[["experiment", "seed", "validation_macro_f1", "optimizer_steps", "training_seconds", "rationale_rows"]])
+assert summary_df.selected_checkpoint.notna().all(), "每个 run 必须有验证集选出的 checkpoint。"
+# 早停下各臂实际步数可以不同；统一的是 epoch 上限与 patience，不是强制同一步数。
+display(summary_df[["experiment", "seed", "validation_macro_f1", "best_validation_macro_f1",
+                    "optimizer_steps", "training_seconds", "rationale_rows"]])
 ''')
 md("test-note", '''
 ## 5. 最终测试与对照表
 此时才读取测试标签。所有实验使用同一测试集，预测时只输入推文。
-输出每组 macro-F1、accuracy、各类别指标、混淆矩阵、逐条预测和相对原始标签组的差值。
-同 seed 的配对 bootstrap 区间只反映测试样本重采样的不确定性，不替代多 seed 结果。
-不要依据这里的测试结果返回调参；权重等超参数应事先指定或仅根据验证集选择。
+Checkpoint 已在验证集按 macro-F1 选定；此处只评估一次，不用于选型。
+输出每组 mean±std macro-F1、最佳单 seed、相对对照的平均差值与 bootstrap CI。
+同 seed 的配对 bootstrap 反映测试重采样不确定性；mean-delta CI 在多种子上取平均后再重采样。
+不要依据测试结果返回调参。
 ''')
 code("test", src["test"][:src["test"].index("if SMOKE_TEST:")] + '''
 if SMOKE_TEST:
@@ -549,12 +568,19 @@ else:
     comparison["delta_macro_f1"] = comparison.test_macro_f1 - comparison.seed.map(baseline_scores)
     comparison.to_csv(RUN_DIR / "comparison.csv", index=False)
     display(comparison[["experiment", "seed", "test_accuracy", "test_macro_f1", "delta_macro_f1", "rationale_rows", "training_seconds"]])
-    aggregate = comparison.groupby("experiment").agg(mean_macro_f1=("test_macro_f1", "mean"),
-        std_macro_f1=("test_macro_f1", "std"), seeds=("seed", "size"))
-    aggregate.to_csv(RUN_DIR / "comparison_aggregate.csv")
-    display(aggregate)  # 一个 seed 的 std 为 NaN，不伪造稳定性。
-    bootstrap = []
+    aggregate = comparison.groupby("experiment").agg(
+        mean_macro_f1=("test_macro_f1", "mean"),
+        std_macro_f1=("test_macro_f1", "std"),
+        best_macro_f1=("test_macro_f1", "max"),
+        mean_delta_macro_f1=("delta_macro_f1", "mean"),
+        seeds=("seed", "size"),
+    ).reset_index()
+    best_idx = comparison.groupby("experiment")["test_macro_f1"].idxmax()
+    best_rows = comparison.loc[best_idx, ["experiment", "seed", "test_macro_f1"]].rename(
+        columns={"seed": "best_seed", "test_macro_f1": "best_seed_macro_f1"})
+    aggregate = aggregate.merge(best_rows, on="experiment")
     gold = test_df.Sentiment.to_numpy()
+    bootstrap, mean_bootstrap = [], []
     for seed in SEEDS:
         for name in EXPERIMENTS:
             if name == "label_only": continue
@@ -566,8 +592,30 @@ else:
                     return f1_score(gold[indices], pred[indices], labels=LABEL_IDS, average="macro", zero_division=0)
                 differences.append(resampled_f1(all_predictions[(name, seed)]) - resampled_f1(all_predictions[("label_only", seed)]))
             low, high = np.percentile(differences, [2.5, 97.5])
-            bootstrap.append({"experiment": name, "seed": seed, "delta_ci_low": low, "delta_ci_high": high})
+            bootstrap.append({"experiment": name, "seed": seed, "delta_ci_low": low, "delta_ci_high": high,
+                              "delta_macro_f1": float(comparison[(comparison.experiment == name) & (comparison.seed == seed)].delta_macro_f1.iloc[0])})
+    for exp_i, name in enumerate(EXPERIMENTS):
+        if name == "label_only": continue
+        rng = np.random.default_rng(3030 + exp_i)
+        mean_deltas = []
+        for _ in range(500):
+            indices = rng.integers(0, len(gold), len(gold))
+            seed_deltas = []
+            for seed in SEEDS:
+                def resampled_f1(pred):
+                    return f1_score(gold[indices], pred[indices], labels=LABEL_IDS, average="macro", zero_division=0)
+                seed_deltas.append(resampled_f1(all_predictions[(name, seed)]) - resampled_f1(all_predictions[("label_only", seed)]))
+            mean_deltas.append(float(np.mean(seed_deltas)))
+        low, high = np.percentile(mean_deltas, [2.5, 97.5])
+        mean_bootstrap.append({"experiment": name,
+                               "mean_delta_ci_low": float(low), "mean_delta_ci_high": float(high)})
+    mean_boot_df = pd.DataFrame(mean_bootstrap)
+    if not mean_boot_df.empty:
+        aggregate = aggregate.merge(mean_boot_df, on="experiment", how="left")
+    aggregate.to_csv(RUN_DIR / "comparison_aggregate.csv", index=False)
+    display(aggregate)  # 一个 seed 时 std 为 NaN，不伪造稳定性；最佳单 seed 与均值分开列出。
     pd.DataFrame(bootstrap).to_csv(RUN_DIR / "paired_bootstrap.csv", index=False)
+    mean_boot_df.to_csv(RUN_DIR / "mean_delta_bootstrap.csv", index=False)
 ''')
 md("export-note", '''
 ## 6. 导出

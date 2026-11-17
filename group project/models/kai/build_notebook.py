@@ -81,7 +81,7 @@ Colab 上 SAVE_TO_DRIVE 可将结果写入 Google Drive；本地结果写入 gro
     cfg = source[CF]["config"]
     cfg = cfg.replace("SAVE_TO_DRIVE = True", "SAVE_TO_DRIVE = False")
     cfg = cfg.replace('ALLOW_TEACHER_REQUESTS = False', 'ALLOW_TEACHER_REQUESTS = RUN_MODE == "rationale-distillation"')
-    cfg = cfg.replace('SEEDS = [42]', 'SEEDS = [42]\nRUN_UNFILTERED = True')
+    cfg = cfg.replace('SEEDS = [42, 43, 44]', 'SEEDS = [42, 43, 44]\nRUN_UNFILTERED = True')
     cfg = cfg.replace('PRIOR_EXTRA_FILES = ()', '''PRIOR_EXPORT = ""
 MATCH_SEED = 42
 PRIOR_EXTRA_FILES = ()

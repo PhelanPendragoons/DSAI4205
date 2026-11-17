@@ -33,7 +33,7 @@ python models/kai/run_local.py --mode counterfactual-matched
 
 翻转组沿用同一组原始标签与严格解释。每组的改写数等于较少方向样本数的两倍。上一轮共有 14 条负转正、32 条正转负，对应平衡组 14/14、原比例组 9/19（方向依次为负转正、正转负）。同方向共享随机顺序，以尽量复用同一批父样本。
 
-结果分别写入 `runs/kai/qwen_rationale_matched_runs/` 和 `runs/kai/qwen_cf_matched_runs/`。先看 `matched_counts.csv` 和 `matched_selection.csv` 核对实际配额与样本，再看 `comparison.csv` 和 `paired_bootstrap.csv`。差值方向分别为严格减随机、平衡减原比例。默认抽样种子 `MATCH_SEED=42` 与学生训练种子 `SEEDS=[42]` 分开记录。复查抽样敏感性可更改 `MATCH_SEED`（命令行 `--match-seed`）并开启新运行。
+结果分别写入 `runs/kai/qwen_rationale_matched_runs/` 和 `runs/kai/qwen_cf_matched_runs/`。先看 `matched_counts.csv` 和 `matched_selection.csv` 核对实际配额与样本，再看 `comparison.csv` 和 `paired_bootstrap.csv`。差值方向分别为严格减随机、平衡减原比例。默认抽样种子 `MATCH_SEED=42` 与学生训练种子 `SEEDS=[42, 43, 44]` 分开记录。复查抽样敏感性可更改 `MATCH_SEED`（命令行 `--match-seed`）并开启新运行。
 
 ## 数据与评估
 
@@ -51,7 +51,16 @@ Qwen 的测试结果由 Colab 运行后导出。要与小组的线性基线比�
 
 **已验证的结果。** 本地用缩小的 Qwen3 在 CPU 上跑通了三种模式。原始标签流程检查覆盖数据划分、LoRA 参数更新和 adapter 重载。蒸馏与反事实流程用模拟教师或缓存检查筛选、对照训练和结果导出。[原始标签检查记录](../../reports/qwen_lora_notebook_validation.json) · [蒸馏检查记录](../../reports/qwen_distillation_notebook_validation.json) · [反事实检查脚本](counterfactual/validate.py)
 
-**正式测试结果。** 固定划分上的独立原始标签 LoRA 测试 macro-F1 为 0.4850，共享 TF-IDF 基线为 0.4461。蒸馏实验中，格式有效解释组相对该次原始标签对照提高 0.0141。反事实实验中，加入 46 条核验通过的改写相对该次仅解释对照提高 0.0017。两项差值的 95% 配对区间都跨过零。各次实验采用 seed 42。[三组运行摘要](../../runs/kai/)
+**模型选择。** 所有学生训练臂统一：`eval/save` 按 epoch、`load_best_model_at_end`、`metric_for_best_model=macro_f1`、早停 patience=3；只在验证集选型，测试集只评估一次。
+
+**正式测试结果。** 固定划分上的独立原始标签 LoRA 测试 macro-F1 为 0.4850，共享 TF-IDF 基线为 0.4461。蒸馏实验中，格式有效解释组相对该次原始标签对照提高 0.0141。反事实实验中，加入 46 条核验通过的改写相对该次仅解释对照提高 0.0017。两项差值的 95% 配对区间都跨过零。历史单次实验为 seed 42；多种子报告见 `comparison_aggregate.csv`（mean±std、最佳单 seed）与 `mean_delta_bootstrap.csv`。[三组运行摘要](../../runs/kai/)
+
+本地多种子示例：
+
+```bash
+python models/kai/run_local.py --mode rationale-distillation --seeds 42,43,44 --rebuild
+python models/kai/run_local.py --mode counterfactual --seeds 42,43,44 --distillation-export path/to/qwen3_rationale_distillation.zip
+```
 
 ## 修改和构建
 

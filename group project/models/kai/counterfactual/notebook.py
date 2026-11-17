@@ -41,7 +41,7 @@ add("markdown", "config-note", """
 DISTILLATION_EXPORT 可指向上一版的 ZIP 或已解压的结果目录。导入后采用其中的划分、基础模型 revision、教师生成参数和解释筛选阈值。
 只提供缓存目录时，TEACHER_CACHE_ROOT 指向旧的 teacher_cache；使用过自定义划分时一并填写 SPLIT_MANIFEST_PATH。
 首次实验没有缓存时，可将 ALLOW_TEACHER_REQUESTS 改为 True 补齐缺项。默认划分的完整解释生成需要 946 个不同请求。
-ALLOW_CF_REQUESTS 单独控制反事实请求。把 SEEDS 改为 [42, 43, 44] 可运行三个随机种子。SMOKE_TEST 仅缩短学生训练。
+ALLOW_CF_REQUESTS 单独控制反事实请求。默认 `SEEDS=[42, 43, 44]`；与蒸馏共用划分、LoRA、epoch 上限与验证 macro-F1 早停规则。SMOKE_TEST 仅缩短学生训练。
 """)
 config = replace_once(source["config"], "RUN_UNFILTERED = True", '''DISTILLATION_EXPORT = ""
 PRIOR_EXTRA_FILES = ()

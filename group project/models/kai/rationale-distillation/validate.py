@@ -44,7 +44,8 @@ run("config", config)
 ns["OUTPUT_ROOT"] = work / "runs"
 ns["RUN_DIR"] = ns["OUTPUT_ROOT"] / ns["RUN_ID"]
 ns["RUN_DIR"].mkdir(parents=True, exist_ok=True)
-ns.update(SMOKE_TEST=True, GRAD_ACCUMULATION=1, TRAIN_BATCH_SIZE=1, EVAL_BATCH_SIZE=1, EPOCHS=1)
+ns.update(SMOKE_TEST=True, GRAD_ACCUMULATION=1, TRAIN_BATCH_SIZE=1, EVAL_BATCH_SIZE=1, EPOCHS=1,
+          SEEDS=[42], EARLY_STOPPING_PATIENCE=3)
 ns["CACHE_ROOT"] = ns["RUN_DIR"] / "teacher_cache_test"
 run("embedded-data")
 run("data")
@@ -152,6 +153,8 @@ run("model-factory")
 run("experiments", sources["experiments"].replace("fp16=not USE_BF16,", "fp16=False, use_cpu=True,"))
 assert len(ns["summaries"]) == 3
 assert all(s["optimizer_steps"] == 2 for s in ns["summaries"])
+assert all(s.get("selected_checkpoint") for s in ns["summaries"])
+assert all(s.get("best_validation_macro_f1") is not None for s in ns["summaries"])
 run("test")
 assert not (ns["RUN_DIR"] / "comparison.csv").exists()
 ns["SMOKE_TEST"] = False
