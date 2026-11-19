@@ -10,6 +10,7 @@ import argparse
 import ast
 import json
 import os
+import re
 import runpy
 import sys
 import traceback
@@ -61,19 +62,29 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", required=True,
                         choices=["label-only", "rationale-distillation", "counterfactual",
-                                 "rationale-matched", "counterfactual-matched"])
+                                 "rationale-matched", "counterfactual-matched", "embedding-mlp"])
     parser.add_argument("--distillation-export", default="",
                         help="Stage-2: path to stage-1 ZIP or extracted folder")
-    parser.add_argument("--prior-export", default="", help="Matched arms: previous run ZIP or directory")
+    parser.add_argument("--prior-export", default="", help="Matched/embedding arms: previous run ZIP or directory")
     parser.add_argument("--match-seed", type=int, default=42, help="Matched arms: seed for sampling training rows")
-    parser.add_argument("--seeds", default="",
-                        help="Comma-separated student training seeds, e.g. 42,43,44 (overrides notebook SEEDS)")
+    parser.add_argument("--seeds", nargs="+",
+                        help="Student/MLP seeds: 42 43 44 or 42,43,44 (default: notebook SEEDS)")
     parser.add_argument("--skip-install", action="store_true", default=True)
     parser.add_argument("--install", dest="skip_install", action="store_false")
     parser.add_argument("--rebuild", action="store_true", help="Rebuild the unified notebook first")
     parser.add_argument("--resume-dir", default="",
                         help="Reuse an existing RUN_DIR (skip finished experiment summaries)")
     args = parser.parse_args(argv)
+    if args.seeds is not None:
+        try:
+            args.seeds = [int(part.strip()) for item in args.seeds
+                          for part in item.split(",") if part.strip()]
+        except ValueError:
+            parser.error("--seeds requires integers, e.g. 42 43 44 or 42,43,44")
+        if not args.seeds or len(set(args.seeds)) != len(args.seeds):
+            parser.error("--seeds requires a nonempty list of unique integers")
+        if args.mode == "label-only":
+            parser.error("label-only uses a single SEED; --seeds is for comparison modes")
 
     _load_env()
     if not (os.environ.get("TEACHER_API_KEY") or os.environ.get("DEEPSEEK_API_KEY")):
@@ -113,21 +124,17 @@ def main(argv=None):
             continue
         if cid == "mode":
             source = source.replace('RUN_MODE = "label-only"', f"RUN_MODE = {args.mode!r}", 1)
-        if cid == "config" and args.seeds:
-            seed_list = [int(part.strip()) for part in args.seeds.split(",") if part.strip()]
-            if not seed_list:
-                raise SystemExit("--seeds 需要至少一个整数，例如 42,43,44")
-            import re
-            updated, n = re.subn(r"SEEDS = \[[^\]]*\]", f"SEEDS = {seed_list!r}", source, count=1)
-            if n != 1:
-                raise RuntimeError("config cell missing SEEDS assignment")
-            source = updated
-            print(f"[run_local] SEEDS = {seed_list}", flush=True)
-        if cid == "config" and args.mode.endswith("-matched"):
+        if cid == "config" and (args.mode.endswith("-matched") or args.mode == "embedding-mlp"):
             path = args.prior_export or args.distillation_export
             if path:
                 source = source.replace('PRIOR_EXPORT = ""', f"PRIOR_EXPORT = {str(Path(path).expanduser().resolve())!r}", 1)
             source = source.replace("MATCH_SEED = 42", f"MATCH_SEED = {args.match_seed}", 1)
+        if cid == "config" and args.seeds is not None:
+            source, count = re.subn(r"^SEEDS = \[[^\]]*\].*$",
+                                    f"SEEDS = {args.seeds!r}", source, count=1, flags=re.M)
+            if count != 1:
+                raise RuntimeError("config cell missing SEEDS assignment")
+            print(f"[run_local] SEEDS = {args.seeds}", flush=True)
         if cid == "config" and args.distillation_export:
             export = str(Path(args.distillation_export).expanduser().resolve())
             if 'DISTILLATION_EXPORT = ""' not in source:
